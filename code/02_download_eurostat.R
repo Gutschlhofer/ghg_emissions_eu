@@ -115,7 +115,7 @@ if(! file.exists("./input/data_eurostat.rds")) {
   gva <- get_eurostat("nama_10r_3gva") %>% 
     dplyr::filter(nchar(geo) == 5,
                   currency == "MIO_EUR",
-                  nace_r2 %in% c("G-I", "J" ,"C", "O-Q","R-U")) # filtering overlapping NACE
+                  !(nace_r2 %in% c("G-I", "J" ,"C", "O-Q","R-U"))) # filtering overlapping NACE
 
   gva_total <- gva %>% dplyr::filter(nace_r2 == "TOTAL")
   gva <- gva %>% 
