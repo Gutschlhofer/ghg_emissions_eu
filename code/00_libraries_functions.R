@@ -18,13 +18,12 @@ p_load(spdep)
 p_load(cartography)
 p_load(summarytools)
 p_load(stargazer)
-p_load(ggpattern)
+p_load(ggpattern) # remotes::install_github("coolbutuseless/ggpattern")
 p_load(spgwr)
 p_load(nngeo)
 p_load(gridExtra)
 p_load(cowplot)
 # add new packages with p_load(packagename)
-
 
 ## Eurostat NUTS 3 shapefile----------------------------------------------------
 
