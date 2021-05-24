@@ -8,6 +8,8 @@ theme_set(theme_minimal())
 plot_path <- "output/plots/"
 plot_template <- paste0("raw_%s",".png")
 
+if(!dir.exists(plot_path)) dir.create(plot_path)
+
 # save plots?
 s <- T
 
@@ -83,22 +85,20 @@ if(s) ggsave(gdp ,path = plot_path, filename = sprintf(plot_template, "GDPpc_qua
 
 
 ## employment shares -----------------------------------------------------------
-gwa <- ggplot(data = data) + 
+gva <- ggplot(data = data) + 
   geom_sf_pattern(data = shape_nuts0, colour = 'black', fill = 'white', pattern = 'stripe',                    
                   pattern_size = 0.5, pattern_linetype = 1, pattern_spacing = 0.008,                    
                   pattern_fill = "white", pattern_density = 0.1, pattern_alpha = 0.7) + 
-  geom_sf(aes(fill = gwa_share_BE), color = "white", size=0.01) +
+  geom_sf(aes(fill = gva_share_BE), color = "white", size=0.01) +
   scale_fill_viridis_c(option = "magma", direction = -1, labels = percent) +  
   theme(legend.title = element_blank()) +
   geom_sf(data=shape_nuts0, color='#000000', fill=NA, size=0.1) + 
   theme(plot.margin=grid::unit(c(0,0,0,0), "cm"))
-if(s) ggsave(gwa, path = plot_path, filename = sprintf(plot_template, "GWA_share"), width = 4, height = 5)
+if(s) ggsave(gva, path = plot_path, filename = sprintf(plot_template, "GVA_share"), width = 4, height = 5)
 
-# possibly only relevant for presentation: combined GDP & GWA share 
-# GDP_GWA <- plot_grid(gdp, gwa, ncol = 2)
-# if(s) ggsave(plot = GDP_GWA, path = plot_path, filename = sprintf(plot_template, "GDP_GWA")) 
-
-
+# possibly only relevant for presentation: combined GDP & GVA share 
+# GDP_GVA <- plot_grid(gdp, gva, ncol = 2)
+# if(s) ggsave(plot = GDP_GVA, path = plot_path, filename = sprintf(plot_template, "GDP_GVA")) 
 
 ## CDD -------------------------------------------------------------------------
 cdd <- ggplot(data = data) + 
@@ -209,7 +209,7 @@ if(s) ggsave(pop_dens, path = plot_path, filename = sprintf(plot_template, "Pop_
 
 # Summary table ----------------------------------------------------------------
 sum_data <- st_drop_geometry(data)
-sum_data <- sum_data %>% dplyr::select(gdppc, density, gwa_share_BE, edgar, hdd, cdd_fix)
+sum_data <- sum_data %>% dplyr::select(gdppc, density, gva_share_BE, edgar, hdd, cdd_fix)
 
 # st_options(descr.transpose = TRUE)
 # 
@@ -220,8 +220,7 @@ sum_data <- sum_data %>% dplyr::select(gdppc, density, gwa_share_BE, edgar, hdd,
 # rownames(summary1) <- c("GDP p.c.", "Population density", "Empl. share in manufact.", "CO² emission levels", "Heating Days Index", "Cooling Days Index")
 # summary1 <- round(summary1, 2)
 # summary1
- 
- 
+
 # equivalent to table 1 from videras
 sum_data_log <- log(sum_data)
 
