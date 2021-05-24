@@ -2,9 +2,22 @@
 # data <- readRDS("input/data.rds")
 
 # Base model -------------------------------------------------------------------
-model_base <- log(edgar) ~ log(pop) + log(density) + log(gdppc) + 
-  I(log(gdppc)^2) + gwa_share_BE +
-  log(hdd) + log(cdd_fix)
+dep_variable <- "log(edgar)"
+
+base_variables <- c(
+  "log(pop)",
+  "log(density)",
+  "log(gdppc)",
+  "I(log(gdppc)^2)",
+  "gva_share_BE",
+  "gva_share_A",
+  "gva_share_F",
+  "gva_share_GJ",
+  "log(hdd)",
+  "log(cdd_fix)"
+)
+
+model_base <- as.formula(paste(dep_variable, "~", paste(base_variables, collapse= "+")))
 ols_base <- lm(model_base, data)
 summary(ols_base)
 
@@ -13,15 +26,11 @@ ols_maup <- lm(model_base, data_nuts2)
 summary(ols_maup)
 
 # Model with country dummies ---------------------------------------------------
-model_cntr <- log(edgar) ~ log(pop) + log(density) + log(gdppc) + 
-  I(log(gdppc)^2) + gwa_share_BE + 
-  log(hdd) + log(cdd_fix) + cntr_code
+model_cntr <- as.formula(paste(dep_variable, "~", paste(base_variables, collapse= "+"), " + cntr_code"))
 ols_cntr <- lm(model_cntr, data)
 summary(ols_cntr)
 
-model_base_no_density <- log(edgar) ~ log(pop) + log(gdppc) + 
-  I(log(gdppc)^2) + gwa_share_BE +
-  log(hdd) + log(cdd_fix)
+model_base_no_density <- as.formula(paste(dep_variable, "~", paste(base_variables[base_variables!="log(density)"], collapse= "+")))
 ols_no_density <- lm(model_base_no_density, data)
 summary(ols_no_density)
 
@@ -32,7 +41,7 @@ output <- stargazer::stargazer(ols_base, ols_cntr, digits=2, # type = "text",
                                single.row = TRUE, no.space = TRUE,
                                dep.var.labels = "CO2",
                                covariate.labels = c("Population", "Density", "GDP/cap", "GDP/cap, squared",
-                                                  "GWA", "HDD", "CDD"),
+                                                  "GVA", "HDD", "CDD"),
                                column.sep.width = "3pt", font.size = "tiny",
                                title = "OLS Regression Results",
                                out = "output/tables/OLS.tex") # flip = TRUE ?
@@ -56,7 +65,7 @@ output <- stargazer::stargazer(ols_base, ols_cntr, digits=2, # type = "text",
                                single.row = TRUE, no.space = TRUE,
                                dep.var.labels = "CO2",
                                covariate.labels = c("Population", "Density", "GDP/cap", "GDP/cap, squared",
-                                                    "GWA", "HDD", "CDD"),
+                                                    "GVA", "HDD", "CDD"),
                                column.sep.width = "3pt", font.size = "footnotesize",
                                title = "OLS Regression Results",
                                out = "output/tables/OLS_footnotesize.tex") # flip = TRUE ?
