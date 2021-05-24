@@ -161,16 +161,16 @@ run_gwr <- function(data,
     if(s) ggsave(path = plot_path, filename = sprintf(plot_template, "log_Density"), width = 4, height = 5)
   }
   
-  # gwa_share_BE
+  # gva_share_BE
   ggplot(data = data_coef) +
     geom_sf_pattern(data = shape_nuts0, colour = 'black', fill = 'white', pattern = 'stripe',                    
                     pattern_size = 0.5, pattern_linetype = 1, pattern_spacing = 0.008,                    
                     pattern_fill = "white", pattern_density = 0.1, pattern_alpha = 0.7) + 
-    geom_sf(aes(fill = gwa_share_BE.1), color = "white", size=0.01) + 
+    geom_sf(aes(fill = gva_share_BE.1), color = "white", size=0.01) + 
     scale_fill_viridis_c(option = "magma", direction = -1) +  
     theme(legend.title = element_blank()) +
     geom_sf(data=shape_nuts0, color='#000000', fill=NA, size=0.1)
-  if(s) ggsave(path = plot_path, filename = sprintf(plot_template, "GWA_share"), width = 4, height = 5)
+  if(s) ggsave(path = plot_path, filename = sprintf(plot_template, "GVA_share"), width = 4, height = 5)
   
   # log.hdd.
   ggplot(data = data_coef) +
@@ -255,16 +255,16 @@ run_gwr <- function(data,
     geom_sf(data=shape_nuts0, color='#000000', fill=NA, size=0.1)
   if(s) ggsave(path = plot_path, filename = sprintf(plot_template, "log_GDPpc2"), width = 4, height = 5)
   
-  # log.gwa_share_BE._p_sig
+  # log.gva_share_BE._p_sig
   ggplot(data = data_coef) +
     geom_sf_pattern(data = shape_nuts0, colour = 'black', fill = 'white', pattern = 'stripe',                    
                     pattern_size = 0.5, pattern_linetype = 1, pattern_spacing = 0.008,                    
                     pattern_fill = "white", pattern_density = 0.1, pattern_alpha = 0.7) + 
-    geom_sf(aes(fill = gwa_share_BE_p_sig), color = "white", size=0.01) + 
+    geom_sf(aes(fill = gva_share_BE_p_sig), color = "white", size=0.01) + 
     scale_fill_manual(values = rev(magma(4)[2:4])) +
     theme(legend.title = element_blank()) +
     geom_sf(data=shape_nuts0, color='#000000', fill=NA, size=0.1)
-  if(s) ggsave(path = plot_path, filename = sprintf(plot_template, "GWA_share"), width = 4, height = 5)
+  if(s) ggsave(path = plot_path, filename = sprintf(plot_template, "GVA_share"), width = 4, height = 5)
   
   # log.hdd._p_sig
   ggplot(data = data_coef) +
