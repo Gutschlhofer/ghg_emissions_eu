@@ -14,10 +14,18 @@ if(!dir.exists(plot_path)) dir.create(plot_path)
 s <- T
 
 # divide into 5 quantiles + corresponding legend
-plot_quantiles <- function(data, variable_name, plot_name, s = F) {
+plot_quantiles <- function(variable_name, data, s = F, shape_nuts0 = shape_nuts0,
+                           plot_path = plot_path, plot_template = plot_template) {
+  library(tidyverse)
+  theme_set(theme_minimal())
+  
+  plot_name <- paste0(variable_name, "_quantiles")
+  
   no_classes <- 5
   var_vector <- data %>% pull(all_of(variable_name))
-  quantiles <- quantile(var_vector, probs = seq(0, 1, length.out = no_classes + 1))
+  quantiles <- quantile(var_vector, probs = seq(0, 1, length.out = no_classes + 1), na.rm = TRUE)
+  
+  quantiles <- quantiles[!duplicated(quantiles)]
   
   labels <- c()
   for(idx in 1:length(quantiles)){
@@ -35,11 +43,12 @@ plot_quantiles <- function(data, variable_name, plot_name, s = F) {
                         include.lowest = T)
   
   p <- ggplot(data = data) +
-    geom_sf_pattern(data = shape_nuts0, colour = 'black', fill = 'white', pattern = 'stripe',                    
-                    pattern_size = 0.5, pattern_linetype = 1, pattern_spacing = 0.008,                    
-                    pattern_fill = "white", pattern_density = 0.1, pattern_alpha = 0.7) + 
+    ggpattern::geom_sf_pattern(
+      data = shape_nuts0, colour = 'black', fill = 'white', pattern = 'stripe',                    
+      pattern_size = 0.5, pattern_linetype = 1, pattern_spacing = 0.008,                    
+      pattern_fill = "white", pattern_density = 0.1, pattern_alpha = 0.7) + 
     geom_sf(aes(fill = quantiles), color = "white", size=0.01) +
-    scale_fill_viridis(direction = -1, discrete = TRUE) + 
+    viridis::scale_fill_viridis(direction = -1, discrete = TRUE) + 
     guides(fill = guide_legend(reverse = TRUE)) +
     theme(legend.title = element_blank()) +
     geom_sf(data=shape_nuts0, color='black', fill=NA, size=0.1) + 
@@ -50,7 +59,13 @@ plot_quantiles <- function(data, variable_name, plot_name, s = F) {
 }
 
 ## EDGAR data ------------------------------------------------------------------
-plot_quantiles(data, variable_name = "edgar", plot_name = "Edgar_quantiles", s = s)
+cl <- makeCluster(parallel::detectCores())
+parLapply(cl = cl, dep_variables, plot_quantiles, data = data, s = s, 
+          shape_nuts0 = shape_nuts0, plot_path = paste0(plot_path, "all_ghg/"), plot_template = plot_template)
+stopCluster(cl)
+
+# lapply(dep_variables, plot_quantiles, data = data, s = s)
+# plot_quantiles(data, variable_name = "edgar", plot_name = "Edgar_quantiles", s = s)
 
 ## GDP p.c. --------------------------------------------------------------------
 no_classes <- 5
