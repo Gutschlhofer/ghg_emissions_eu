@@ -23,6 +23,8 @@ p_load(spgwr)
 p_load(nngeo)
 p_load(gridExtra)
 p_load(cowplot)
+p_load(spatialreg)
+p_load(naniar)
 # add new packages with p_load(packagename)
 
 ## Eurostat NUTS 3 shapefile----------------------------------------------------
@@ -41,16 +43,16 @@ getShapefile <- function(replace = FALSE){
     # create a directory
     dir.create("input/shapefile")
     
-    shape_nuts3 <- eurostat::get_eurostat_geospatial(output_class="sf", resolution="1", nuts_level=3, year=2016) %>% 
+    shape_nuts3 <- eurostat::get_eurostat_geospatial(
+      output_class="sf", resolution="1", nuts_level=3, year=2016, 
+      make_valid = TRUE) %>% 
       dplyr::rename("nuts3_id" = "NUTS_ID")
     names(shape_nuts3) <- tolower(names(shape_nuts3))
     # plot(sf::st_geometry(shape_nuts3))
     
-    # is valid?
-    any(!st_is_valid(shape_nuts3)) # no
-    # now we buffer
-    any(!st_is_valid(st_buffer(shape_nuts3, 0)))
-    shape_nuts3 <- st_buffer(shape_nuts3, 0)
+    shape_nuts3 <- shape_nuts3 %>% dplyr::mutate(urbn_type = as.factor(urbn_type),
+                                  coast_type = as.factor(coast_type),
+                                  mount_type = as.factor(mount_type))
     
     # filter overseas territories
     overseas <- c("FRY10", "FRY20", "FRY30", "FRY40", "FRY50", "FRM01", "FRM02", 
