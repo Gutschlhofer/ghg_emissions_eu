@@ -16,8 +16,8 @@ run_gwr <- function(data,
   
   # make spatial data frame
   spdf <- SpatialPointsDataFrame(data_coords, 
-                                st_drop_geometry(data), 
-                                proj4string = CRS("+proj=longlat +datum=WGS84"))
+                                 st_drop_geometry(data), 
+                                 proj4string = CRS("+proj=longlat +datum=WGS84"))
   
   # 2. bandwidth function, run GWR -----------------------------------------------
   bw_fct <- method
@@ -25,29 +25,37 @@ run_gwr <- function(data,
   if(bw_fct == "bisq"){
     # find best neighbour specification
     # select bandwidth, here Videras (2014) uses >>gwr.bisquare<<
-    bw <- ifelse(is.null(adapt),
-                 gwr.sel(model, data = spdf,# coords = data_coords, 
-                          gweight = gwr.bisquare, longlat = TRUE, verbose = FALSE, adapt = TRUE
-                          ,method = ifelse(cv, "cv", "aic")),
-                 adapt)
-
+    if(is.null(adapt)) {
+      bw <- gwr.sel(model, data = spdf,# coords = data_coords, 
+                    gweight = gwr.bisquare, longlat = TRUE, verbose = FALSE, adapt = TRUE
+                    ,method = ifelse(cv, "cv", "aic"))
+    } else {
+      bw <- adapt
+    }
+    
     gwr <- gwr(model, data = spdf,
                adapt = bw, gweight = gwr.bisquare,
                longlat = TRUE, se.fit = TRUE, hatmatrix = TRUE)
   } else if(bw_fct == "gauss"){
-    bw <- ifelse(is.null(adapt),
-                 gwr.sel(model, data = spdf,# coords = data_coords, 
-                         gweight = gwr.Gauss, longlat = TRUE, verbose = FALSE, adapt = TRUE
-                         ,method = ifelse(cv, "cv", "aic")),
-                 adapt)
+    if(is.null(adapt)) {
+      bw <- gwr.sel(model, data = spdf,# coords = data_coords, 
+                    gweight = gwr.Gauss, longlat = TRUE, verbose = FALSE, adapt = TRUE
+                    ,method = ifelse(cv, "cv", "aic"))
+    } else {
+      bw <- adapt
+    }
     
     gwr <- gwr(model, data = spdf,
                adapt = bw, gweight = gwr.Gauss,
                longlat = TRUE, se.fit = TRUE, hatmatrix = TRUE)
   } else { # tricube
-    bw <- gwr.sel(model, data = spdf, 
-                  gweight = gwr.tricube, longlat = TRUE, verbose = FALSE,
-                  adapt = TRUE, method = ifelse(cv, "cv", "aic"))
+    if(is.null(adapt)) {
+      bw <- gwr.sel(model, data = spdf,# coords = data_coords, 
+                    gweight = gwr.tricube, longlat = TRUE, verbose = FALSE, adapt = TRUE
+                    ,method = ifelse(cv, "cv", "aic"))
+    } else {
+      bw <- adapt
+    }
     
     gwr <- gwr(model, data = spdf,
                adapt = bw, gweight = gwr.tricube,
@@ -95,7 +103,7 @@ run_gwr <- function(data,
   
   data_coef <- cbind(data,st_drop_geometry(coef),gwr_output[,all_of(c(p_vec, sig_vec))])
   
-  turning_point <- exp(-data_coef$log.gdppc./(2*data_coef$I.log.gdppc..2.))
+  turning_point <- exp(-data_coef$log_gdppc/(2*data_coef$I.log_gdppc.2.))
   
   cat(summary(turning_point), file = paste0("output/tables/turning_point",file_name_add,".txt"))
   
@@ -128,7 +136,7 @@ run_gwr <- function(data,
     geom_sf_pattern(data = shape_nuts0, colour = 'black', fill = 'white', pattern = 'stripe',                    
                     pattern_size = 0.5, pattern_linetype = 1, pattern_spacing = 0.008,                    
                     pattern_fill = "white", pattern_density = 0.1, pattern_alpha = 0.7) + 
-    geom_sf(aes(fill = log.gdppc.), color = "white", size=0.01) + 
+    geom_sf(aes(fill = log_gdppc), color = "white", size=0.01) + 
     scale_fill_viridis_c(option = "magma", direction = -1) +  
     theme(legend.title = element_blank()) +
     geom_sf(data=shape_nuts0, color='#000000', fill=NA, size=0.1)
@@ -139,7 +147,7 @@ run_gwr <- function(data,
     geom_sf_pattern(data = shape_nuts0, colour = 'black', fill = 'white', pattern = 'stripe',                    
                     pattern_size = 0.5, pattern_linetype = 1, pattern_spacing = 0.008,                    
                     pattern_fill = "white", pattern_density = 0.1, pattern_alpha = 0.7) + 
-    geom_sf(aes(fill = I.log.gdppc..2.), color = "white", size=0.01) + 
+    geom_sf(aes(fill = I.log_gdppc.2.), color = "white", size=0.01) + 
     scale_fill_viridis_c(option = "magma", direction = -1) +  
     theme(legend.title = element_blank()) +
     geom_sf(data=shape_nuts0, color='#000000', fill=NA, size=0.1)
@@ -238,7 +246,7 @@ run_gwr <- function(data,
     geom_sf_pattern(data = shape_nuts0, colour = 'black', fill = 'white', pattern = 'stripe',                    
                     pattern_size = 0.5, pattern_linetype = 1, pattern_spacing = 0.008,                    
                     pattern_fill = "white", pattern_density = 0.1, pattern_alpha = 0.7) + 
-    geom_sf(aes(fill = log.gdppc._p_sig), color = "white", size=0.01) + 
+    geom_sf(aes(fill = log_gdppc_p_sig), color = "white", size=0.01) + 
     scale_fill_manual(values = rev(magma(4)[2:4])) +
     theme(legend.title = element_blank()) +
     geom_sf(data=shape_nuts0, color='#000000', fill=NA, size=0.1)
@@ -249,7 +257,7 @@ run_gwr <- function(data,
     geom_sf_pattern(data = shape_nuts0, colour = 'black', fill = 'white', pattern = 'stripe',                    
                     pattern_size = 0.5, pattern_linetype = 1, pattern_spacing = 0.008,                    
                     pattern_fill = "white", pattern_density = 0.1, pattern_alpha = 0.7) + 
-    geom_sf(aes(fill = I.log.gdppc..2._p_sig), color = "white", size=0.01) + 
+    geom_sf(aes(fill = I.log_gdppc.2._p_sig), color = "white", size=0.01) + 
     scale_fill_manual(values = rev(magma(4)[2:4])) +
     theme(legend.title = element_blank()) +
     geom_sf(data=shape_nuts0, color='#000000', fill=NA, size=0.1)
