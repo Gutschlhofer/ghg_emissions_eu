@@ -1,183 +1,192 @@
 # load data
 # data <- readRDS("input/data.rds")
 
-# Base model -------------------------------------------------------------------
-dep_variable <- "log(edgar)"
-
-base_variables <- c(
-  "log(pop)",
-  "log(density)",
-  "log(gdppc)",
-  "I(log(gdppc)^2)",
-  "gva_share_BE",
-  "gva_share_A",
-  "gva_share_F",
-  "gva_share_GJ",
-  "log(hdd)",
-  "log(cdd_fix)"
-)
-
-model_base <- as.formula(paste(dep_variable, "~", paste(base_variables, collapse= "+")))
-ols_base <- lm(model_base, data)
-summary(ols_base)
-
-# check for MAUP
-ols_maup <- lm(model_base, data_nuts2)
-summary(ols_maup)
-
-# Model with country dummies ---------------------------------------------------
-model_cntr <- as.formula(paste(dep_variable, "~", paste(base_variables, collapse= "+"), " + cntr_code"))
-ols_cntr <- lm(model_cntr, data)
-summary(ols_cntr)
-
-model_base_no_density <- as.formula(paste(dep_variable, "~", paste(base_variables[base_variables!="log(density)"], collapse= "+")))
-ols_no_density <- lm(model_base_no_density, data)
-summary(ols_no_density)
-
-# OLS TABLE
-# Output for Presentation (fontsize = tiny):
-################################################################################
-output <- stargazer::stargazer(ols_base, ols_cntr, digits=2, # type = "text", 
-                               single.row = TRUE, no.space = TRUE,
-                               dep.var.labels = "CO2",
-                               covariate.labels = c("Population", "Density", "GDP/cap", "GDP/cap, squared",
-                                                  "GVA", "HDD", "CDD"),
-                               column.sep.width = "3pt", font.size = "tiny",
-                               title = "OLS Regression Results",
-                               out = "output/tables/OLS.tex") # flip = TRUE ?
-
-# filter out all entries containing country dummies
-output <- output[!grepl("cntr",output)]
-constant_line_nr <- grep("Constant",output)
-dummy_line <- "  Country Dummies & No & Yes \\\\" # 4 backslashes makes 2
-
-# put output together
-output <- c(output[1:constant_line_nr],
-            dummy_line,
-            output[(constant_line_nr+1):length(output)])
-
-# save output
-cat(output, file = "./output/tables/OLS_dummyshort.tex", sep = "\n")
-
-# Output for Presentation (fontsize = footnotesize):
-################################################################################
-output <- stargazer::stargazer(ols_base, ols_cntr, digits=2, # type = "text", 
-                               single.row = TRUE, no.space = TRUE,
-                               dep.var.labels = "CO2",
-                               covariate.labels = c("Population", "Density", "GDP/cap", "GDP/cap, squared",
-                                                    "GVA", "HDD", "CDD"),
-                               column.sep.width = "3pt", font.size = "footnotesize",
-                               title = "OLS Regression Results",
-                               out = "output/tables/OLS_footnotesize.tex") # flip = TRUE ?
-
-# filter out all entries containing country dummies
-output <- output[!grepl("cntr",output)]
-constant_line_nr <- grep("Constant",output)
-dummy_line <- "  Country Dummies & No & Yes \\\\" # 4 backslashes makes 2
-
-# put output together
-output <- c(output[1:constant_line_nr],
-            dummy_line,
-            output[(constant_line_nr+1):length(output)])
-
-# save output
-cat(output, file = "./output/tables/OLS_dummyshort_paper.tex", sep = "\n")
-
-# Moran I test -----------------------------------------------------------------
-
-# save plots under
-plot_path <- "output/plots/"
-theme_set(theme_minimal())
-
-## 1. Create proper W matrix
-
-data_coords <- st_coordinates(st_centroid(data$geometry))
-
-### knn
-k <- round(0.163404391231319 * nrow(data)) # use amount of neighbours determined by gwr_sel
-lw_knn <- knearneigh(data_coords, k=k) %>% 
-  knn2nb()
-
-### inverse distance (based on knn)
-dlist <- nbdists(lw_knn, data_coords, longlat = TRUE)
-idlist <- lapply(dlist, function(x) 1/x)
-lw_inversedist <- nb2listw(lw_knn, glist=idlist, style="W")
-m <- listw2mat(lw_inversedist)
-
-### inverse distance (for all)
-lw_d <- dnearneigh(data_coords, 0, Inf, longlat = TRUE)
-dlist <- nbdists(lw_d, data_coords, longlat = TRUE)
-idlist <- lapply(dlist, function(x) 1/x)
-lw_inversedist_all <- nb2listw(lw_d, glist=idlist, style="W")
-m_all <- listw2mat(lw_inversedist_all)
-
-### convert all to lw objects
-lw_knn <- lw_knn %>% nb2listw()
-lw_d <- lw_d %>% nb2listw()
-
-## 2. Moran's I Test
-moran.test(data$edgar, lw_knn)
-moran.test(data$edgar, lw_inversedist)
-# moran.test(data$edgar, lw_d)
-moran.test(data$edgar, lw_inversedist_all)
-
-moran.test(ols_base$residuals, lw_knn)
-moran.test(ols_cntr$residuals, lw_knn)
-
-moran.test(ols_base$residuals, lw_inversedist)
-moran.test(ols_cntr$residuals, lw_inversedist)
-
-moran.test(ols_base$residuals, lw_inversedist_all)
-moran.test(ols_cntr$residuals, lw_inversedist_all)
-
-## 3. Local Moran's I Test
-
-plot_template <- paste0("localmoran_sig_%s",".png")
-not_sig_str <- "n.sig"
-
-plot_localmoran_sig <- function(test_input, data, lw, subtitle) {
-  localI <- data.frame(localmoran(test_input, lw))
-  data_I <- cbind(data, localI)
-
-  data_I <- data_I %>% dplyr::mutate(p = `Pr.z...0.`, 
-                                     sig=ifelse(p < 0.001, "p < 0.001", 
-                                                ifelse(p < 0.05, 
-                                                       "p < 0.05", not_sig_str)),
-                                     sig=ifelse(sig == not_sig_str,sig,
-                                                paste(ifelse(Ii>0,"pos,","neg,"),sig)))
-  # set as factor to have logical (and not alphabetical) ordering
-  data_I$sig <- factor(data_I$sig, 
-                       levels = c(unique(data_I$sig)[unique(data_I$sig)!=not_sig_str] %>% 
-                                    sort(),
-                                  not_sig_str))
-
-  ggplot(data = data_I) +
-    geom_sf_pattern(data = shape_nuts0, colour = 'black', fill = 'white', pattern = 'stripe',                    
-                    pattern_size = 0.5, pattern_linetype = 1, pattern_spacing = 0.008,                    
-                    pattern_fill = "white", pattern_density = 0.1, pattern_alpha = 0.7) + 
-    geom_sf(aes(fill = sig), color = "white", size=0.01) + 
-    scale_fill_manual(values = magma(4)[2:4]) +
-    theme(legend.title = element_blank()) +
-    geom_sf(data=shape_nuts0, color='#000000', fill=NA, size=0.1)
+run_ols <- function(dep_var, data, data_nuts2, ghg_aggregate_over_sector) {
+  library(tidyverse)
+  library(sf)
   
-  # replace special characters subtitle 
-  subtitle <- stringr::str_replace(subtitle, " / ", "_")
-  subtitle <- stringr::str_replace(subtitle, "-", "_")
-  subtitle <- stringr::str_replace(subtitle, " ", "_")
+  # Base model -------------------------------------------------------------------
+  dep_variable <- sprintf("log(%s)", dep_var) #"log(edgar)"
   
-  ggsave(path = plot_path, filename = sprintf(plot_template, subtitle), scale=1, width = 4, height = 5)
+  base_variables <- c(
+    "log(pop)",
+    "log(density)",
+    "log_gdppc",
+    "I(log_gdppc^2)",
+    "log(gva_share_A)",
+    "log(gva_share_BE)",
+    "log(gva_share_F)",
+    "log(gva_share_GJ)",
+    "log(hdd)",
+    "log(cdd_fix)",
+    "log(REN)",
+    "urbn_type",
+    "coast_type",
+    "mount_type"
+  )
+  
+  base_labels <- c(
+    "log(pop)",
+    "log(density)",
+    "log(gdppc)",
+    "I(log(gdppc)^2)",
+    "log(gva_share_A)",
+    "log(gva_share_BE)",
+    "log(gva_share_F)",
+    "log(gva_share_GJ)",
+    "log(hdd)",
+    "log(cdd_fix)",
+    "log(REN)",
+    # the following have multiple labels
+    "urbn_type",
+    "coast_type",
+    "mount_type"
+  )
+  
+  model_base <- as.formula(paste(dep_variable, "~", paste(base_variables, collapse= "+")))
+  
+  if(any(is.na(data %>% st_drop_geometry %>% pull(dep_var)))) {
+    omitted <- data[is.na(data %>% st_drop_geometry %>% pull(dep_var)),]
+    
+    data <- data[!is.na(data %>% st_drop_geometry %>% pull(dep_var)),]
+    
+    output <- sprintf("%s: %.0f rows omitted, countries: %s", dep_var, nrow(omitted), paste(omitted$cntr_code %>% unique, collapse = ","))
+    
+    cat(output, file = sprintf("./output/tables/OLS_%s_omitted.txt", dep_var), sep = "\n")
+  }
+  
+  # check if there are 0 values in the dependent variable
+  # this is an issue since we take the log
+  if(any(data %>% st_drop_geometry %>% pull(dep_var) == 0)) {
+    # separate the column we want to change (otherwise selection without geometry is hard)
+    temp <- data %>% st_drop_geometry %>% dplyr::select(all_of(dep_var))
+    data <- data %>% dplyr::select(-all_of(dep_var))
+    
+    # add 1kg CO2 equiv to all observations
+    temp[,dep_var] <- temp[,dep_var]+0.001
+    # TODO: robustness check with Inverse hyperbolic sine (IHS) transformation
+    
+    data <- data %>% cbind(temp)
+  }
+  
+  if(nrow(data) == 0) return()
+  
+  ols_base <- lm(model_base, data)
+  summary(ols_base)
+  
+  saveRDS(ols_base, file = sprintf("./output/regressions/OLS_%s.rds", dep_var))
+  
+  if(dep_var %in% ghg_aggregate_over_sector) {
+    # check for MAUP
+    ols_maup <- lm(as.formula(paste(dep_variable, "~", paste(base_variables[!(base_variables %in% c("urbn_type",
+                                                                                                    "coast_type",
+                                                                                                    "mount_type"))], collapse= "+"))), 
+                   data_nuts2)
+    output <- summary(ols_maup)
+    saveRDS(ols_base, file = sprintf("./output/regressions/OLS_%s_maup.rds", dep_var))
+    cat(paste(output), file = sprintf("./output/tables/OLS_%s_maup.txt", dep_var), sep = "\n")
+  }
+  
+  # Model with country dummies ---------------------------------------------------
+  model_cntr <- as.formula(paste(dep_variable, "~", paste(base_variables[base_variables!="log(REN)"], collapse= "+"), " + cntr_code"))
+  ols_cntr <- lm(model_cntr, data)
+  summary(ols_cntr)
+  saveRDS(ols_cntr, file = sprintf("./output/regressions/OLS_%s_cntr.rds", dep_var))
+  
+  model_base_no_density <- as.formula(paste(dep_variable, "~", paste(base_variables[base_variables!="log(density)"], collapse= "+")))
+  ols_no_density <- lm(model_base_no_density, data)
+  summary(ols_no_density)
+  saveRDS(ols_no_density, file = sprintf("./output/regressions/OLS_%s_no_density.rds", dep_var))
+  
+  # OLS TABLE
+  # Output for Presentation (fontsize = tiny):
+  ################################################################################
+  output <- stargazer::stargazer(ols_base, ols_cntr, digits=2, # type = "text", 
+                                 single.row = TRUE, no.space = TRUE,
+                                 dep.var.labels = dep_var,
+                                 # covariate.labels = c("Population", "Density", "GDP/cap", "GDP/cap, squared",
+                                 #                      "GVA", "HDD", "CDD"),
+                                 column.sep.width = "3pt", font.size = "tiny",
+                                 title = sprintf("OLS Regression Results for %s", dep_var),
+                                 out = sprintf("output/tables/OLS_%s.tex", dep_var)) # flip = TRUE ?
+  
+  # filter out all entries containing country dummies
+  output <- output[!grepl("cntr",output)]
+  constant_line_nr <- grep("Constant",output)
+  dummy_line <- "  Country Dummies & No & Yes \\\\" # 4 backslashes makes 2
+  
+  # put output together
+  output <- c(output[1:constant_line_nr],
+              dummy_line,
+              output[(constant_line_nr+1):length(output)])
+  
+  # save output
+  cat(output, file = sprintf("./output/tables/OLS_%s_dummyshort.tex", dep_var), sep = "\n")
+  
+  # Output for Presentation (fontsize = footnotesize):
+  ################################################################################
+  output <- stargazer::stargazer(ols_base, ols_cntr, digits=2, # type = "text",
+                                 single.row = TRUE, no.space = TRUE,
+                                 dep.var.labels = dep_var,
+                                 # covariate.labels = c("Population", "Density", "GDP/cap", "GDP/cap, squared",
+                                 #                      "GVA", "HDD", "CDD"),
+                                 column.sep.width = "3pt", font.size = "footnotesize",
+                                 title = sprintf("OLS Regression Results for %s", dep_var),
+                                 out = sprintf("output/tables/OLS_%s_footnotesize.tex", dep_var)) # flip = TRUE ?
+  
+  # filter out all entries containing country dummies
+  output <- output[!grepl("cntr",output)]
+  constant_line_nr <- grep("Constant",output)
+  dummy_line <- "  Country Dummies & No & Yes \\\\" # 4 backslashes makes 2
+  
+  # put output together
+  output <- c(output[1:constant_line_nr],
+              dummy_line,
+              output[(constant_line_nr+1):length(output)])
+  
+  # save output
+  cat(output, file = sprintf("./output/tables/OLS_%s_dummyshort_paper.tex", dep_var), sep = "\n")
+  
 }
 
-plot_localmoran_sig(data$edgar, data, lw = lw_knn, subtitle = "edgar / k-nearest-neighbours")
-plot_localmoran_sig(data$edgar, data, lw = lw_inversedist, subtitle = "edgar / KNN-inverse-distance")
-plot_localmoran_sig(data$edgar, data, lw = lw_inversedist_all, subtitle = "edgar / inverse-distance")
+# dep_variables2 <- dep_variables[(6+19):109]
+# dep_variables2 <- dep_variables[grepl("edgar_co2", tolower(dep_variables))]
+dep_variables2 <- dep_variables
+# dep_variables2 <- ghg_aggregate_over_sector
 
-plot_localmoran_sig(ols_base$residuals, data, lw = lw_knn, subtitle = "OLS residuals / k-nearest-neighbours")
-plot_localmoran_sig(ols_cntr$residuals, data, lw = lw_knn, subtitle = "OLS CFE residuals / k-nearest-neighbours")
+# lapply(dep_variables2, run_ols, data = data, data_nuts2 = data_nuts2, ghg_aggregate_over_sector = ghg_aggregate_over_sector)
+# 
+# for(dep_var in dep_variables2) {
+#   run_ols(dep_var, data, data_nuts2, ghg_aggregate_over_sector)
+# }
 
-plot_localmoran_sig(ols_base$residuals, data, lw = lw_inversedist, subtitle = "OLS residuals / inverse distance")
-plot_localmoran_sig(ols_cntr$residuals, data, lw = lw_inversedist, subtitle = "OLS CFE residuals / inverse distance")
+cl <- makeCluster(parallel::detectCores())
+parLapply(cl = cl, dep_variables2, run_ols, data = data, data_nuts2 = data_nuts2, ghg_aggregate_over_sector = ghg_aggregate_over_sector)
+stopCluster(cl)
 
-plot_localmoran_sig(ols_base$residuals, data, lw = lw_inversedist_all, subtitle = "OLS residuals / inverse distance all")
-plot_localmoran_sig(ols_cntr$residuals, data, lw = lw_inversedist_all, subtitle = "OLS CFE residuals / inverse distance all")
+get_coef_from_file <- function(file_rds, all_coef_names) {
+  ols <- readRDS(file_rds)
+  coefs <- ols %>% coef
+  
+  # in case we are missing one or more coefs, add them as NAs here
+  coefs[all_coef_names[!all_coef_names %in% names(coefs)]] <- NA
+  
+  nobs <- nobs(ols)
+  coefs["nobs"] <- nobs
+  coefs[c(all_coef_names,"nobs")]
+  return(coefs)
+}
 
+files_regressions_no_density <- list.files("output/regressions", pattern = "_no_density.rds", full.names = T)
+all_coef_names <- readRDS(file_rds[1]) %>% coef %>% names
+
+regressions_no_density <- lapply(files_regressions_no_density, get_coef_from_file, all_coef_names = all_coef_names)
+
+short_names <- list.files("output/regressions", pattern = "_no_density.rds", full.names = F) %>% 
+  # str_replace("OLS_edgar_", "") %>% 
+  str_replace(".rds", "")
+
+df <- data.frame(matrix(unlist(regressions_no_density), nrow=length(regressions_no_density[[1]]), byrow=FALSE))
+
+rownames(df) <- c(all_coef_names, "nobs")
+colnames(df) <- short_names
