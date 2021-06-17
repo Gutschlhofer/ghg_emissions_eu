@@ -1,5 +1,6 @@
 # setup ------------------------------------------------------------------------
-year_filter <- 2016
+year_single <- 2016
+year_filter <- c(2000:2018)
 
 # get independent variables ----------------------------------------------------
 # shapefile
@@ -26,7 +27,7 @@ transform_to_co2_eq <- function(value, type) {
   return(value*factor)
 }
 
-data_edgar <- readRDS("input/data_edgar.rds") %>%  
+data_edgar <- readRDS("input/data_edgar_all.rds") %>%  
   dplyr::filter(year %in% year_filter) %>% 
   dplyr::mutate(indicator = str_replace(indicator, "CO2_excl_short-cycle_org_C", "CO2_long")) %>% 
   dplyr::mutate(indicator = str_replace(indicator, "CO2_org_short-cycle_C", "CO2_short")) %>% 
@@ -37,10 +38,14 @@ data_edgar <- readRDS("input/data_edgar.rds") %>%
   # convert N2O to tonnes CO2 equiv
   dplyr::mutate(value = ifelse(grepl("n2o", tolower(indicator)), 
                                transform_to_co2_eq(value, "N2O"), 
-                               value))
-  
+                               value)) %>% 
+  # exclude CH4_PRO_COAL, OIL, GAS since they are already contained in CH4_PRO
+  dplyr::filter(!grepl("edgar_CH4_PRO_", indicator, fixed = TRUE))
+
 # add total sectoral GHG emissions
 sectors <- read.csv("input/edgar/edgar_sectors.csv")$short
+sectors <- sectors[!grepl("PRO_", sectors, fixed = TRUE)]
+
 for(sector in sectors) {
   # 1. filter for one sector, aggregate
   tmp <- data_edgar %>% 
@@ -71,7 +76,6 @@ data_edgar <- data_edgar %>%
 # combine data -----------------------------------------------------------------
 data <- shape_nuts3 %>% 
   dplyr::left_join(data_eurostat, by = c("nuts3_id")) %>% 
-  # dplyr::left_join(data_edgar, by = c("nuts3_id", "year")) %>%
   dplyr::left_join(data_edgar, by = c("nuts3_id", "year")) %>%
   dplyr::left_join(data_heating_cooling, by = c("nuts3_id", "year"))
 
@@ -105,6 +109,14 @@ exclude <- c(
 )
 data <- data %>% dplyr::filter(!cntr_code %in% exclude)
 
+# remove some observations that have no direct neighbours (for queen contiguity)
+# no_neigh <- c(505:506,521,539,570:571,608)
+no_neigh <- c("EL623", "EL624", "DK014", "FI200", "EL621", "EL622", "DK031")
+data <- data[!data$nuts3_id %in% no_neigh,]
+
+data_panel <- data
+data <- data %>% dplyr::filter(year == year_single)
+
 # fix outliers
 data[data$edgar > quantile(data$edgar,0.99),]$edgar
 
@@ -134,6 +146,7 @@ data_filter_outlier <- data %>%
 
 summary(data)
 saveRDS(data, "input/data.rds")
+saveRDS(data_panel, "input/data_panel.rds")
 saveRDS(data_fix_outlier, "input/data_fix_outlier.rds")
 saveRDS(data_filter_outlier, "input/data_filter_outlier.rds")
 
@@ -149,8 +162,13 @@ data_nuts2 <- data_nuts2 %>%
             edgar = sum(edgar),
             edgar_co2 = sum(edgar_co2),
             edgar_co2_short = sum(edgar_co2_short),
+            edgar_co2_total = sum(edgar_co2_total),
             edgar_ch4 = sum(edgar_ch4),
             edgar_n2o = sum(edgar_n2o),
+            REN = mean(REN),
+            REN_ELC = mean(REN_ELC),
+            REN_HEAT_CL = mean(REN_HEAT_CL),
+            REN_TRA = mean(REN_TRA),
             area = sum(area), 
             pop = sum(pop), 
             hdd = mean(hdd), 
@@ -207,10 +225,6 @@ summary(data_nuts2)
 saveRDS(data_nuts2, "input/data_nuts2.rds")
 
 # Further prepare data for analysis --------------------------------------------
-
-# remove some observations that have no direct neighbours (for queen contiguity)
-no_neigh <- c(505:506,521,539,570:571,608)
-data <- data[-no_neigh,]
 
 # prepare log_gdppc, the logged value of gdppc centered around the mean
 data <- data %>% 
