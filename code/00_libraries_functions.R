@@ -25,6 +25,7 @@ p_load(gridExtra)
 p_load(cowplot)
 p_load(spatialreg)
 p_load(naniar)
+p_load(ggmosaic)
 # add new packages with p_load(packagename)
 
 ## Eurostat NUTS 3 shapefile----------------------------------------------------

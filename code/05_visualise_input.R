@@ -37,10 +37,14 @@ plot_quantiles <- function(variable_name, data, s = F, shape_nuts0 = shape_nuts0
   # remove the last label because that would be something like "100.000 - NA"
   labels <- labels[1:length(labels)-1]
   
-  data$quantiles <- cut(var_vector, 
-                        breaks = quantiles, 
-                        labels = labels, 
-                        include.lowest = T)
+  if(length(quantiles) > 1) {
+    data$quantiles <- cut(var_vector, 
+                          breaks = quantiles, 
+                          labels = labels, 
+                          include.lowest = T)
+  } else {
+    data$quantiles <- as.factor(var_vector)
+  }
   
   p <- ggplot(data = data) +
     ggpattern::geom_sf_pattern(
@@ -59,13 +63,22 @@ plot_quantiles <- function(variable_name, data, s = F, shape_nuts0 = shape_nuts0
 }
 
 ## EDGAR data ------------------------------------------------------------------
+files <- list.files("output/plots/all_ghg")
+files <- str_replace(files, "_quantiles.png", "")
+files <- str_replace(files, "raw_", "")
+
+dep_variables2 <- dep_variables[!dep_variables %in% files]
+
 cl <- makeCluster(parallel::detectCores())
-parLapply(cl = cl, dep_variables, plot_quantiles, data = data, s = s, 
+parLapply(cl = cl, dep_variables2, plot_quantiles, data = data, s = s, 
           shape_nuts0 = shape_nuts0, plot_path = paste0(plot_path, "all_ghg/"), plot_template = plot_template)
 stopCluster(cl)
 
-# lapply(dep_variables, plot_quantiles, data = data, s = s)
-# plot_quantiles(data, variable_name = "edgar", plot_name = "Edgar_quantiles", s = s)
+# for(dep_var in dep_variables2){
+#   print(dep_var)
+#   plot_quantiles(variable_name = dep_var, data = data, s = s, 
+#                  shape_nuts0 = shape_nuts0, plot_path = paste0(plot_path, "all_ghg/"), plot_template = plot_template)
+# }
 
 ## GDP p.c. --------------------------------------------------------------------
 no_classes <- 5
@@ -97,54 +110,63 @@ gdp <- ggplot(data = data) +
   theme(plot.margin=grid::unit(c(0,0,0,0), "cm")) 
 if(s) ggsave(gdp ,path = plot_path, filename = sprintf(plot_template, "GDPpc_quantiles"), width = 5, height = 5)
 
-
+plot_c <- function(variable_name, data, s = F, shape_nuts0 = shape_nuts0,
+                     plot_path = plot_path, plot_template = plot_template,
+                     direction = -1, pct = TRUE) {
+    data <- data %>% dplyr::rename(var = all_of(variable_name))
+    my_plot <- ggplot(data = data) + 
+      geom_sf_pattern(data = shape_nuts0, colour = 'black', fill = 'white', pattern = 'stripe',                    
+                      pattern_size = 0.5, pattern_linetype = 1, pattern_spacing = 0.008,                    
+                      pattern_fill = "white", pattern_density = 0.1, pattern_alpha = 0.7) + 
+      geom_sf(aes(fill = var), color = "white", size=0.01)
+    
+    if(pct) { my_plot <- my_plot + scale_fill_viridis_c(option = "magma", direction = -1, labels = percent) 
+    } else {  my_plot <- my_plot + scale_fill_viridis_c(option = "magma", direction = -1) }
+    
+    my_plot <- my_plot +
+      theme(legend.title = element_blank()) +
+      geom_sf(data=shape_nuts0, color='#000000', fill=NA, size=0.1) + 
+      theme(plot.margin=grid::unit(c(0,0,0,0), "cm"))
+    if(s) ggsave(my_plot, path = plot_path, filename = sprintf(plot_template, variable_name), width = 4, height = 5)
+    return(my_plot)
+}
 
 ## employment shares -----------------------------------------------------------
-gva <- ggplot(data = data) + 
-  geom_sf_pattern(data = shape_nuts0, colour = 'black', fill = 'white', pattern = 'stripe',                    
-                  pattern_size = 0.5, pattern_linetype = 1, pattern_spacing = 0.008,                    
-                  pattern_fill = "white", pattern_density = 0.1, pattern_alpha = 0.7) + 
-  geom_sf(aes(fill = gva_share_BE), color = "white", size=0.01) +
-  scale_fill_viridis_c(option = "magma", direction = -1, labels = percent) +  
-  theme(legend.title = element_blank()) +
-  geom_sf(data=shape_nuts0, color='#000000', fill=NA, size=0.1) + 
-  theme(plot.margin=grid::unit(c(0,0,0,0), "cm"))
-if(s) ggsave(gva, path = plot_path, filename = sprintf(plot_template, "GVA_share"), width = 4, height = 5)
+plot_c(variable_name = "gva_share_A", data = data, s = s, shape_nuts0 = shape_nuts0, 
+       plot_path = plot_path, plot_template = plot_template, direction = -1)
+plot_c(variable_name = "gva_share_BE", data = data, s = s, shape_nuts0 = shape_nuts0, 
+       plot_path = plot_path, plot_template = plot_template, direction = -1)
+plot_c(variable_name = "gva_share_F", data = data, s = s, shape_nuts0 = shape_nuts0, 
+       plot_path = plot_path, plot_template = plot_template, direction = -1)
+plot_c(variable_name = "gva_share_GJ", data = data, s = s, shape_nuts0 = shape_nuts0, 
+       plot_path = plot_path, plot_template = plot_template, direction = -1)
+
+plot_c(variable_name = "REN", data = data, s = s, shape_nuts0 = shape_nuts0, 
+       plot_path = plot_path, plot_template = plot_template, direction = -1)
+plot_c(variable_name = "REN_ELC", data = data, s = s, shape_nuts0 = shape_nuts0, 
+       plot_path = plot_path, plot_template = plot_template, direction = -1)
+plot_c(variable_name = "REN_HEAT_CL", data = data, s = s, shape_nuts0 = shape_nuts0, 
+       plot_path = plot_path, plot_template = plot_template, direction = -1)
+plot_c(variable_name = "REN_TRA", data = data, s = s, shape_nuts0 = shape_nuts0, 
+       plot_path = plot_path, plot_template = plot_template, direction = -1)
 
 # possibly only relevant for presentation: combined GDP & GVA share 
 # GDP_GVA <- plot_grid(gdp, gva, ncol = 2)
 # if(s) ggsave(plot = GDP_GVA, path = plot_path, filename = sprintf(plot_template, "GDP_GVA")) 
 
 ## CDD -------------------------------------------------------------------------
-cdd <- ggplot(data = data) + 
-    geom_sf_pattern(data = shape_nuts0, colour = 'black', fill = 'white', pattern = 'stripe',                    
-                    pattern_size = 0.5, pattern_linetype = 1, pattern_spacing = 0.008,                    
-                    pattern_fill = "white", pattern_density = 0.1, pattern_alpha = 0.7) + 
-  geom_sf(aes(fill = cdd), color = "white", size=0.01) +
-  scale_fill_viridis_c(direction = -1) +
-  theme(legend.title = element_blank()) +
-  geom_sf(data=shape_nuts0, color='#000000', fill=NA, size=0.1) + 
-  theme(plot.margin=grid::unit(c(0,0,0,0), "cm"))
-if(s) ggsave(cdd, path = plot_path, filename = sprintf(plot_template, "CDD"), width = 4, height = 5) 
-
-
+cdd <- plot_c(variable_name = "cdd", data = data, s = s, shape_nuts0 = shape_nuts0, 
+              plot_path = plot_path, plot_template = plot_template, 
+              direction = -1, pct = FALSE)
 
 ## HDD -------------------------------------------------------------------------
-hdd <- ggplot(data = data) + 
-  geom_sf_pattern(data = shape_nuts0, colour = 'black', fill = 'white', pattern = 'stripe', 
-                  pattern_size = 0.5, pattern_linetype = 1, pattern_spacing = 0.008, 
-                  pattern_fill = "white", pattern_density = 0.1, pattern_alpha = 0.7) + 
-  geom_sf(aes(fill = hdd), color = "white", size=0.01) +
-  scale_fill_viridis_c(option="magma", direction = -1) +
-  theme(legend.title = element_blank()) + 
-  geom_sf(data=shape_nuts0, color='#000000', fill=NA, size=0.1) + 
-  theme(plot.margin=grid::unit(c(0,0,0,0), "cm"))
-if(s) ggsave(hdd, path = plot_path, filename = sprintf(plot_template, "HDD"), width = 4, height = 5) 
+hdd <- plot_c(variable_name = "hdd", data = data, s = s, shape_nuts0 = shape_nuts0, 
+              plot_path = plot_path, plot_template = plot_template, 
+              direction = -1, pct = FALSE)
 
 # combined HDD and CDD
 HDD_CDD <- plot_grid(hdd, cdd, ncol = 2)
 if(s) ggsave(plot = HDD_CDD, path = plot_path, filename = sprintf(plot_template, "HDD_CDD"), width = 10, height = 6) 
-
 
 
 ## population ------------------------------------------------------------------
@@ -221,6 +243,33 @@ if(s) ggsave(dens, path = plot_path, filename = sprintf(plot_template, "Density_
 pop_dens <- plot_grid(pop, dens, ncol = 2)
 if(s) ggsave(pop_dens, path = plot_path, filename = sprintf(plot_template, "Pop_Dens"), width = 10, height = 6)
 
+# plot some discrete variables -------------------------------------------------
+
+plot_d <- function(variable_name, data, s = F, shape_nuts0 = shape_nuts0,
+                   plot_path = plot_path, plot_template = plot_template,
+                   direction = -1) {
+  data <- data %>% dplyr::rename(var = all_of(variable_name))
+  my_plot <- ggplot(data = data) + 
+    geom_sf_pattern(data = shape_nuts0, colour = 'black', fill = 'white', pattern = 'stripe',                    
+                    pattern_size = 0.5, pattern_linetype = 1, pattern_spacing = 0.008,                    
+                    pattern_fill = "white", pattern_density = 0.1, pattern_alpha = 0.7) + 
+    geom_sf(aes(fill = var), color = "white", size=0.01) +
+    scale_fill_viridis_d(option = "magma", direction = direction) +  
+    theme(legend.title = element_blank()) +
+    geom_sf(data=shape_nuts0, color='#000000', fill=NA, size=0.1) + 
+    theme(plot.margin=grid::unit(c(0,0,0,0), "cm"))
+  if(s) ggsave(my_plot, path = plot_path, filename = sprintf(plot_template, variable_name), width = 4, height = 5)
+}
+
+plot_d(variable_name = "urbn_type", data = data, s = s, shape_nuts0 = shape_nuts0, 
+       plot_path = plot_path, plot_template = plot_template, direction = -1)
+plot_d(variable_name = "coast_type", data = data, s = s, shape_nuts0 = shape_nuts0, 
+       plot_path = plot_path, plot_template = plot_template, direction = -1)
+plot_d(variable_name = "mount_type", data = data, s = s, shape_nuts0 = shape_nuts0, 
+       plot_path = plot_path, plot_template = plot_template, direction = 1)
+
+
+
 
 # Summary table ----------------------------------------------------------------
 sum_data <- st_drop_geometry(data)
@@ -250,3 +299,151 @@ colnames(summary2) <- c("GDP p.c.", "Population density", "Empl. share in manufa
 rownames(summary2) <- c("Mean (orig. values)", "Std.Dev (orig. values)", "Mean (log values)", "Std.Dev (log values)")
 summary2 <- round(summary2, 2)
 summary2
+
+## EDGAR sector disaggregation -------------------------------------------------
+# mosaic plot by GHG, sector
+
+sectors_to_show <- 10
+
+scale_x_list <- function (name = waiver(), breaks = ggmosaic:::product_breaks(), minor_breaks = NULL,
+                                 labels = ggmosaic:::product_labels(), limits = NULL, expand = waiver(),
+                                 oob = scales:::censor, na.value = NA_real_, trans = "identity",
+                                 position = "bottom", sec.axis = waiver())
+{
+  sc <- ggplot2::continuous_scale(c("x", "xmin", "xmax", "xend",
+                                    "xintercept", "xmin_final", "xmax_final", "xlower",
+                                    "xmiddle", "xupper"), "position_c", identity, name = name,
+                                  breaks = breaks, minor_breaks = minor_breaks, labels = labels,
+                                  limits = limits, expand = expand, oob = oob, na.value = na.value,
+                                  trans = trans, guide = "none", position = position,
+                                  super = ScaleContinuousProduct)
+  if (!ggplot2:::is.waive(sec.axis)) {
+    if (ggplot2:::is.formula(sec.axis))
+      sec.axis <- ggplot2::sec_axis(sec.axis)
+    is.sec_axis = getFromNamespace("is.sec_axis", "ggplot2")
+    if (!ggplot2:::is.sec_axis(sec.axis))
+      stop("Secondary axes must be specified using 'sec_axis()'")
+    sc$secondary.axis <- sec.axis
+  }
+  sc
+}
+
+get_ghg_name_from_indicator <- function(indicator) {
+  ind <- ifelse(grepl("CO2", indicator),
+                substr(indicator, 7, 11),
+                substr(indicator, 7, 9))
+  return(ind)
+}
+get_sector_name_from_indicator <- function(indicator) {
+  start <- ifelse(grepl("CO2_short", indicator),
+                  17,
+                  ifelse(grepl("CO2_long", indicator), 16, 11))
+  
+  sector <- substring(indicator, start)
+  return(sector)
+}
+
+plot_mosaic <- function(data, sector_detail = c("sector_name", "category", "category_main")) {
+  
+  sectors_to_show <- 10
+  
+  data_m <- data %>% 
+    st_drop_geometry() %>% 
+    dplyr::select(nuts3_id, cntr_code, year, 
+                  starts_with("edgar_"),
+                  -starts_with("edgar_GHG"),
+                  # small caps is only totals
+                  -starts_with("edgar_co2", ignore.case = FALSE),
+                  -edgar_n2o, -edgar_ch4
+    ) %>% 
+    tidyr::pivot_longer(cols = starts_with("edgar_"), #c(nuts3_id, cntr_code, year),
+                        names_to = "indicator")
+  
+  data_m <- data_m %>% 
+    dplyr::mutate(ghg = get_ghg_name_from_indicator(indicator),
+                  sector = get_sector_name_from_indicator(indicator))
+  
+  # now we join the sectors list to either aggregate by 
+  # sector name, category or even main category
+  data_m <- data_m %>% 
+    dplyr::left_join(read.csv("input/edgar/edgar_sectors.csv")[,c("short", sector_detail)],
+                     by = c("sector" = "short")) %>% 
+    dplyr::select(-sector) %>% 
+    dplyr::rename(sector = all_of(sector_detail))
+  
+  data_m <- data_m %>% dplyr::select(sector, ghg, value)
+  
+  # get most important sectors
+  data_s <- data_m %>% 
+    dplyr::group_by(sector) %>% 
+    dplyr::summarise(value = sum(value, na.rm = TRUE)) %>% 
+    dplyr::ungroup() %>% 
+    dplyr::arrange(desc(value)) %>% 
+    dplyr::slice_head(n = sectors_to_show)
+  
+  data_m <- data_m %>% 
+    dplyr::mutate(sector = ifelse(sector %in% data_s$sector, sector, "n.e.c.")) %>% 
+    dplyr::group_by(sector, ghg) %>% 
+    dplyr::summarise(value = sum(value, na.rm = TRUE)) %>% 
+    dplyr::ungroup() %>% 
+    dplyr::mutate(sector = factor(sector, levels = c(unique(data_s$sector), "n.e.c.")),
+                  ghg = as.factor(ghg))
+  
+  breaks_values <- data_m %>%
+    dplyr::group_by(ghg) %>%
+    dplyr::summarise(value = sum(value, na.rm = TRUE) / 1000) %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(value = cumsum(value) )
+  
+  # change to string for labelling
+  breaks_values$ghg <- as.character(breaks_values$ghg)
+  
+  # if you only want breaks at actual breakpoints and not also for ghg labels inbetween, use this in the plot and set the labels accordingly
+  graph_breaks_temp <- c(0,breaks_values$value) # + c(0,-0.1,-0.15,-0.05,-0.05,-0.05,0.05,0)
+  
+  ## The code below creates breaks in-between the breaks
+  #  in order to show the ghg labels there
+  graph_breaks <- c()
+  graph_labels <- c()
+  for(i in 1:(length(graph_breaks_temp)-1)){
+    new_break <- (graph_breaks_temp[i+1]+graph_breaks_temp[i])/2
+    
+    # if(i == 1){
+    #   graph_breaks <- c(graph_breaks_temp[i]) # otherwise we never add index i
+    #   graph_labels <- c("0.0")
+    # }
+    
+    # add to the breaks
+    graph_breaks <- c(graph_breaks,
+                      new_break)#,
+    # graph_breaks_temp[i+1])
+    # add to the labels
+    graph_labels <- c(graph_labels,
+                      breaks_values$ghg[i])#,
+    # as.character(round(graph_breaks_temp[i+1],1)))
+  }
+  
+  mosaic <- data_m %>%
+    ggplot() +
+    geom_mosaic(aes(weight = value, x = product(sector, ghg), fill = sector), na.rm=T, divider=ddecker(), offset = 0.005) +
+    theme(legend.position="right") +
+    theme_bw() +
+    scale_y_continuous(labels = scales::percent) +
+    # scale_x_list(position = "top", sec.axis = ggplot2::sec_axis(~.*sum(data_m$value/1000), breaks = graph_breaks, labels = graph_labels, name = expression("Mt CO"[2]*"e"))) +
+    scale_x_list(position = "top", sec.axis = ggplot2::sec_axis(~.*sum(data_m$value/1000), breaks = graph_breaks, labels = graph_labels)) +
+    # facet_grid(group~.) +
+    labs(x = "", y = "") +
+    guides(fill=guide_legend(title = sector_detail, reverse = TRUE)) +
+    viridis::scale_fill_viridis(discrete = TRUE)
+  
+  # # one can also add text inside the rectangles
+  # mosaic +
+  #   geom_text(data = ggplot_build(mosaic)$data[[1]] %>% mutate(.wt = round(.wt,0)), aes(x = (xmin+xmax)/2, y = (ymin+ymax)/2, label=replace(.wt, .wt < 300, "")))
+  
+  if(s) ggsave(mosaic, path = plot_path, filename = sprintf(plot_template, paste0("ghg_mosaic_", sector_detail)), width = ifelse(sector_detail == "category", 12, 8), height = 5)
+  
+}
+
+plot_mosaic(data, sector_detail = "sector_name")
+plot_mosaic(data, sector_detail = "category")
+plot_mosaic(data, sector_detail = "category_main")
