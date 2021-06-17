@@ -27,7 +27,7 @@ if(! file.exists("./input/data_eurostat.rds")) {
     dplyr::select(year, nuts3_id, value)
   
   pop_0013 <- dist %>%
-    tidyr::complete(year = 2000:2013, nuts3_id = dist$nuts3_id) %>%
+    tidyr::complete(nuts3_id, year = 2000:2013) %>%
     dplyr::mutate(iso2 = substr(nuts3_id, 1, 2)) %>%
     dplyr::group_by(nuts3_id) %>%
     dplyr::mutate(value = value[year == 2014]) %>%
@@ -39,7 +39,9 @@ if(! file.exists("./input/data_eurostat.rds")) {
     dplyr::filter(unit == "THS_PER", na_item == "POP_NC", year %in% c(2000:2013)) %>%
     dplyr::select(year, iso2 = geo, value_nat = values)
   
-  pop_0013 <- merge(pop_0013, pop_nat, by = c("year", "iso2")) %>%
+  pop_0013 <- pop_0013 %>% 
+    filter(year != 2014) %>% 
+    merge(pop_nat, by = c("year", "iso2")) %>%
     dplyr::mutate(value = round(value*value_nat, digits = 0),
                   indicator = "pop") %>%
     dplyr::select(year, nuts3_id, value, indicator)
@@ -134,6 +136,25 @@ if(! file.exists("./input/data_eurostat.rds")) {
   
   rm(gva_total)
   
+  # Download Renewable Energy Shares -------------------------------------------
+  # only available on a country level
+  shares <- get_eurostat("nrg_ind_ren") %>% 
+    dplyr::filter(nchar(geo) == 2) %>% 
+    dplyr::mutate(time = format(as.Date(time, format="%Y/%m/%d"),"%Y")) %>% 
+    dplyr::select(unit = nrg_bal, geo, time, values)
+  
+  shares <- pop %>% dplyr::select(nuts3_id, year) %>% 
+    distinct(nuts3_id, year) %>% 
+    dplyr::mutate(cntr_id = substr(nuts3_id, 1,2),
+                  year = as.character(year)) %>% 
+    dplyr::right_join(shares, by = c("cntr_id" = "geo", "year" = "time")) %>% 
+    dplyr::select(indicator = unit,
+                  nuts3_id,
+                  year,
+                  value = values) %>% 
+    dplyr::filter(!is.na(nuts3_id)) %>% 
+    dplyr::mutate(value = value/100) # to make it range from 0-1
+  
   # Download Data additional data (not used in analysis):-----------------------
   # 1.) People at risk of poverty or social exclusion 
   # Only available on NUTS2, so not added to main data for now
@@ -175,7 +196,7 @@ if(! file.exists("./input/data_eurostat.rds")) {
   #combine
   fineurostat <- rbind(gdp, gdppc, empl, gva, road)
   colnames(fineurostat) <- c("indicator","nuts3_id", "year", "value")
-  fineurostat <- rbind(pop, fineurostat)
+  fineurostat <- rbind(pop, shares, fineurostat)
   
   #save
   saveRDS(fineurostat, "./input/data_eurostat.rds")
