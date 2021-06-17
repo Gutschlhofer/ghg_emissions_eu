@@ -17,7 +17,8 @@ dataframe_from_raster_file <- function(file_name, indicator_name, sector = "TOTA
   r$a <- area(r) # calc area of raster grid, in km2
   r$avalue <- r$value/r$a # get area corrected value, tons per km2
   
-  er <- raster::extract(r, shape_nuts3, method = "simple", fun = mean, na.rm = TRUE, df = TRUE, sp = TRUE, weights = TRUE) 
+  er <- raster::extract(r, shape_nuts3, method = "simple", fun = mean,
+                        na.rm = TRUE, df = TRUE, sp = TRUE, weights = TRUE) 
   # weights = TRUE: approximate fraction of each cell that is covered by the polygon, should perform better at borders 
   
   # look for totals, which is just before the year e.g. "_2010_TOTALS.txt"
@@ -56,9 +57,24 @@ get_edgar_data <- function(download_link, file_name, short_name, sector = "TOTAL
   
   fs <- list.files(folder_name, pattern = ".txt$", full.names = T)
   
-  # use only years 2000-2018
-  fs <- fs[31:49]
-  # fs <- fs[41:49]
+  years <- 2000:2018
+  
+  # check if we already have parts (or all) of the years available
+  if(file.exists(paste0("input/data_edgar_",short_name,".rds"))) {
+    years_avail <- readRDS(paste0("input/data_edgar_",short_name,".rds")) %>% 
+      distinct(year) %>% pull(year)
+    
+    years <- years[!years %in% years_avail]
+  }
+  if(length(years) == 0) {
+    return()
+  }
+  
+  # use only years not done yet
+  fs <- fs[as.numeric(substr(fs,
+                             regexpr(paste0(sector, ".txt"), fs)[1]-5,
+                             regexpr(paste0(sector, ".txt"), fs)[1]-2))
+             %in% years]
   
   if(is.na(fs[1])) {
     warning("Data is not available for all years and no data is available for the current selection.")
@@ -92,6 +108,14 @@ get_edgar_data <- function(download_link, file_name, short_name, sector = "TOTAL
   
   # save CO2 data
   data_edgar_ghg <- do.call(rbind, data_edgar_ghg)
+  
+  # check if we already have some data available,
+  # then we just merge it
+  if(file.exists(paste0("input/data_edgar_",short_name,".rds"))) {
+    data_orig <- readRDS(paste0("input/data_edgar_",short_name,".rds"))
+    data_edgar_ghg <- rbind(data_edgar_ghg, data_orig)
+  }
+  
   saveRDS(data_edgar_ghg, paste0("input/data_edgar_",short_name,".rds"))
 }
 
@@ -119,7 +143,8 @@ if(! file.exists("./input/data_edgar.rds")) {
   
   # Now sector-specific data----------------------------------------------------
   # 
-  sector_info <- read.csv("input/edgar/edgar_sectors.csv")
+  sector_info <- read.csv("input/edgar/edgar_sectors.csv") %>% 
+    dplyr::filter(!short %in% c("PRO_COAL","PRO_GAS","PRO_OIL")) # those are all aggregated in "PRO"
   substances <- c("CH4", "CO2_excl_short-cycle_org_C", "CO2_org_short-cycle_C", "N2O")
   # link <- sprintf(
   #   "https://cidportal.jrc.ec.europa.eu/ftp/jrc-opendata/EDGAR/datasets/v60_GHG/%s/%s/%s_txt.zip",
