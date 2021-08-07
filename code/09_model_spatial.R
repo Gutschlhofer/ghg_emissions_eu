@@ -2,7 +2,32 @@
 lw_spatial <- lw_queen
 lw_spatial <- lw_inversedist
 
+dep_variable <- "log(edgar_co2)"
+
 # 1. Model with everything
+base_variables <- c(
+  "log(pop)",
+  "log(pop_share_Y15_64)",
+  "log(pop_share_Y_GE65)",
+  "log(density)",
+  "log_gdppc",
+  "I(log_gdppc^2)",
+  "log(gva_share_A)",
+  "log(gva_share_BE)",
+  "log(gva_share_F)",
+  "log(gva_share_GJ)",
+  "log(hdd)",
+  "log(cdd_fix)",
+  "log(REN)",
+  "urbn_type",
+  "coast_type" #,
+  # "mount_type"
+)
+
+model_base <- as.formula(paste(dep_variable, "~", paste(base_variables, collapse= "+")))
+model_cntr <- as.formula(paste(dep_variable, "~", paste(base_variables[base_variables!="log(REN)"], collapse= "+"), " + cntr_code"))
+model_base_no_density <- as.formula(paste(dep_variable, "~", paste(base_variables[base_variables!="log(density)"], collapse= "+")))
+
 
 # Then we test downwards
 
@@ -111,7 +136,10 @@ LR.Sarlm(model_sar, model_sac)
 
 #####
 
-model_sdem <- spatialreg::errorsarlm(model_base, data = data, listw = lw_spatial, etype = "emixed")
+model_sdem <- spatialreg::errorsarlm(model_base, 
+                                     data = data, 
+                                     listw = lw_spatial, 
+                                     etype = "emixed")
 model_sdem %>% summary()
 # only significant lag:
 #                       Estimate Std. Error  z value  Pr(>|z|)
@@ -138,6 +166,8 @@ dep_variable <- sprintf("log(%s)", dep_var) #"log(edgar)"
 
 base_variables <- c(
   "log(pop)",
+  "log(pop_share_Y15_64)",
+  "log(pop_share_Y_GE65)",
   "log(density)",
   "log_gdppc",
   "I(log_gdppc^2)",
@@ -147,9 +177,10 @@ base_variables <- c(
   "log(gva_share_GJ)",
   "log(hdd)",
   "log(cdd_fix)",
+  "log(REN)",
   "urbn_type",
-  "coast_type",
-  "mount_type"
+  "coast_type" #,
+  # "mount_type"
 )
 
 model_base_ev <- as.formula(paste(dep_variable, "~", paste(c(base_variables, paste0("ev", 1:n_ev)), collapse= "+")))
