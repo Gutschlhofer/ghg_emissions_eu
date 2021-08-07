@@ -7,47 +7,96 @@ if(! file.exists("./input/data_eurostat.rds")) {
   # Download Data --------------------------------------------------------------
   
   # 1.) Population
-  # Total (men + women) over all agegroups are chosen, only data for 2014-2020
-  pop <- get_eurostat("demo_r_pjangrp3") %>% 
-    filter(sex == "T" & age == "TOTAL" & nchar(geo) == 5) %>% 
-    mutate(unit = "pop",
-           year = as.numeric(format(as.Date(time, format="%Y/%m/%d"),"%Y"))) %>%
+  # this has only accurate information from 2007 onwards
+  pop <- get_eurostat("demo_r_pjanaggr3") %>% 
+    dplyr::filter(
+      sex == "T"
+      ,nchar(geo) == 5
+      # exclude redundant or non-needed age groups
+      ,!(age %in% c("UNK"))
+    ) %>% 
+    dplyr::mutate(
+      # here we prepare the population numbers
+      unit = ifelse(age == "TOTAL", 
+                    "pop", 
+                    # use gsub() to replace "-" which is problematic in col names
+                    paste0("pop_", age %>% gsub("-", "_", .))),
+      year = as.numeric(format(as.Date(time, format="%Y/%m/%d"),"%Y"))
+    ) %>%
+    dplyr::filter(
+      year >= 2007 # data for all regions is only available from 2007 onwards
+      # but some regions offer longer time series
+    ) %>% 
     dplyr::select(year, nuts3_id = geo, value = values, indicator = unit)
   
-  # Get NUTS3 population data for 2000-2013
-  # use NUTS3 population distribution for all years and multiply with
-  # total national numbers of respective year
-  dist <- pop %>%
-    dplyr::filter(year == 2014) %>%
-    dplyr::mutate(iso2 = substr(nuts3_id, 1, 2)) %>%
-    dplyr::group_by(iso2) %>%
-    dplyr::mutate(value_nat = sum(value, na.rm = T)) %>%
-    dplyr::ungroup() %>%
-    dplyr::mutate(value = value/value_nat) %>%
-    dplyr::select(year, nuts3_id, value)
+  # calculate population shares for the age groups
+  pop <- pop %>% 
+    tidyr::pivot_wider(id_cols = c("year", "nuts3_id"), names_from = "indicator") %>% 
+    dplyr::mutate(
+      pop_share_Y_LT15 = pop_Y_LT15/pop,
+      pop_share_Y15_64 = pop_Y15_64/pop,
+      pop_share_Y_GE65 = pop_Y_GE65/pop
+    ) %>% 
+    dplyr::select(-starts_with("pop_Y")) %>% 
+    tidyr::pivot_longer(cols = starts_with("pop"), names_to = "indicator")
   
-  pop_0013 <- dist %>%
-    tidyr::complete(nuts3_id, year = 2000:2013) %>%
-    dplyr::mutate(iso2 = substr(nuts3_id, 1, 2)) %>%
-    dplyr::group_by(nuts3_id) %>%
-    dplyr::mutate(value = value[year == 2014]) %>%
-    dplyr::ungroup()
+  # 1.b) Population, more detailed age groups from 2014 onwards
   
-  pop_nat <- get_eurostat("nama_10_pe") %>%
-    dplyr::mutate(year = as.numeric(format(as.Date(time, format="%Y/%m/%d"),"%Y")),
-                  values = values*1000) %>%
-    dplyr::filter(unit == "THS_PER", na_item == "POP_NC", year %in% c(2000:2013)) %>%
-    dplyr::select(year, iso2 = geo, value_nat = values)
+  # groups based on Liddle, Lung 2010
+  age_group <- c(
+    "TOTAL" = "TOTAL", # we leave total as-is
+    # younger working class
+    "Y20-24" = "Y20_34",
+    "Y25-29" = "Y20_34",
+    "Y30-34" = "Y20_34",
+    # middle aged working class
+    "Y35-39" = "Y35_49",
+    "Y40-44" = "Y35_49",
+    "Y45-49" = "Y35_49",
+    # older working class
+    "Y50-54" = "Y50_64",
+    "Y55-59" = "Y50_64",
+    "Y60-64" = "Y50_64",
+    # retirees
+    "Y65-69" = "Y_GE64",
+    "Y70-74" = "Y_GE64",
+    "Y75-79" = "Y_GE64",
+    "Y80-84" = "Y_GE64",
+    "Y_GE85" = "Y_GE64"
+  )
   
-  pop_0013 <- pop_0013 %>% 
-    filter(year != 2014) %>% 
-    merge(pop_nat, by = c("year", "iso2")) %>%
-    dplyr::mutate(value = round(value*value_nat, digits = 0),
-                  indicator = "pop") %>%
-    dplyr::select(year, nuts3_id, value, indicator)
+  pop_detailed <- get_eurostat("demo_r_pjangrp3") %>% 
+    dplyr::filter(
+      sex == "T"
+      # ,age == "TOTAL"
+      ,nchar(geo) == 5
+      # exclude redundant or non-needed age groups
+      ,!(age %in% c("Y85-89", "Y_GE90", "Y_LT5", "Y5-9", "Y10-14", "Y15-19", "UNK"))
+    ) %>% 
+    dplyr::mutate(age = age_group[age]) %>% 
+    dplyr::group_by(geo, age, time) %>% 
+    dplyr::summarise(values = sum(values, na.rm = TRUE)) %>% 
+    dplyr::ungroup() %>% 
+    dplyr::mutate(
+      # here we prepare the population numbers
+      unit = ifelse(age == "TOTAL", "pop", paste0("pop_", age)),
+      year = as.numeric(format(as.Date(time, format="%Y/%m/%d"),"%Y"))
+    ) %>%
+    dplyr::filter(
+      !(unit %in% c("pop", "pop_Y_GE64")) # we already have those
+    ) %>% 
+    dplyr::select(year, nuts3_id = geo, value = values, indicator = unit)
+  # problem: this is only available from 2014 onwards
   
-  pop <- rbind(pop, pop_0013) %>%
-    dplyr::arrange(year, nuts3_id)
+  # calculate population shares for the age groups
+  pop_detailed <- pop_detailed %>%
+    dplyr::left_join(pop %>% dplyr::filter(indicator == "pop") %>% dplyr::select(year, nuts3_id, value),
+                     by = c("year", "nuts3_id"), suffix = c("", ".total")) %>% 
+    dplyr::mutate(value = value/value.total,
+                  indicator = str_replace(indicator, "pop", "pop_share")) %>% 
+    dplyr::select(-value.total)
+  
+  pop <- rbind(pop, pop_detailed)
   
   # 2.) GDP and GPD/PC
   # PPP standards and PPP per capita are chosen here, other alternatives woud be:
