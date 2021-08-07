@@ -328,21 +328,6 @@ scale_x_list <- function (name = waiver(), breaks = ggmosaic:::product_breaks(),
   sc
 }
 
-get_ghg_name_from_indicator <- function(indicator) {
-  ind <- ifelse(grepl("CO2", indicator),
-                substr(indicator, 7, 11),
-                substr(indicator, 7, 9))
-  return(ind)
-}
-get_sector_name_from_indicator <- function(indicator) {
-  start <- ifelse(grepl("CO2_short", indicator),
-                  17,
-                  ifelse(grepl("CO2_long", indicator), 16, 11))
-  
-  sector <- substring(indicator, start)
-  return(sector)
-}
-
 plot_mosaic <- function(data, sector_detail = c("sector_name", "category", "category_main")) {
   
   sectors_to_show <- 10
