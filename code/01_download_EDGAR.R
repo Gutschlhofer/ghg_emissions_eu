@@ -177,10 +177,6 @@ if(! file.exists("./input/data_edgar.rds")) {
   sector_info <- read.csv("input/edgar/edgar_sectors.csv") %>% 
     dplyr::filter(!short %in% c("PRO_COAL","PRO_GAS","PRO_OIL")) # those are all aggregated in "PRO"
   substances <- c("CH4", "CO2_excl_short-cycle_org_C", "CO2_org_short-cycle_C", "N2O")
-  # link <- sprintf(
-  #   "https://cidportal.jrc.ec.europa.eu/ftp/jrc-opendata/EDGAR/datasets/v60_GHG/%s/%s/%s_txt.zip",
-  #   indicator, sector, sector
-  # )
   link_template <- "https://cidportal.jrc.ec.europa.eu/ftp/jrc-opendata/EDGAR/datasets/v60_GHG/%s/%s/%s_txt.zip"
   
   # the functions check for files present and data already extracted
@@ -205,47 +201,6 @@ if(! file.exists("./input/data_edgar.rds")) {
     }
   }
   
-  # # plot 2016 points
-  # fs <- list.files("input/edgar/co2", pattern = ".txt$", full.names = T)
-  # fs <- fs[47] #2016
-  # 
-  # shape_nuts3 <- getShapefile()
-  # 
-  # r <- read.delim(file = fs, header = T, sep = ";", dec = ".", skip = 2) %>%
-  #   dplyr::select(lon, lat, value = starts_with("emission")) %>%
-  #   rasterFromXYZ(crs = "+proj=longlat +datum=WGS84") #not sure about the datum but projection should be correct
-  # 
-  # r@data@values <- ifelse(is.na(r@data@values), NA, 1)
-  # plot(r)
-  # plot(r, xlim=c(0,5),ylim=c(30,35))
-  # 
-  # 
-  # xy <- xyFromCell(r, which(r[]==1))
-  # 
-  # mp <- st_multipoint(x = xy, dim = "XY")
-  # geom <- st_cast(st_sfc(mp), "POINT")
-  # pts <- st_sf(v = 1, geom, crs = NA) %>%
-  #   st_set_crs(crs(shape_nuts3))
-  # intpts <- st_intersection(shape_nuts3, pts)
-  # 
-  # # Europe
-  # ggplot() +
-  #   geom_sf_pattern(data = shape_nuts0, colour = 'black', fill = 'white', pattern = 'stripe',
-  #                   pattern_size = 0.5, pattern_linetype = 1, pattern_spacing = 0.008,
-  #                   pattern_fill = "white", pattern_density = 0.1, pattern_alpha = 0.7) +
-  # 
-  #   geom_sf(data = shape_nuts3, color='#000000', fill = "white", size=0.1) +
-  #   geom_sf(data = shape_nuts0, color='#000000', fill=NA, size=0.5) +
-  #   geom_sf(data = intpts, color = "green", fill="green", size=0.3, alpha = 0.9) +
-  #   theme(plot.margin=grid::unit(c(0,0,0,0), "cm"))
-  # 
-  # # DE only
-  # ggplot() +
-  #   geom_sf(data = shape_nuts3 %>% dplyr::filter(cntr_code == "DE"), color='#000000', fill = "white", size=0.1) +
-  #   geom_sf(data = shape_nuts0 %>% dplyr::filter(cntr_code == "DE"), color='#000000', fill=NA, size=0.5) +
-  #   geom_sf(data = intpts %>% dplyr::filter(cntr_code == "DE"), color = "green", fill="green", size=0.3, alpha = 0.9) +
-  #   theme(plot.margin=grid::unit(c(0,0,0,0), "cm"))
-
   # rbind all
   data_edgar <- rbind(readRDS("input/data_edgar_co2.rds"),
                       readRDS("input/data_edgar_ch4.rds"),
