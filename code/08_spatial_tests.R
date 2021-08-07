@@ -1,7 +1,7 @@
 # Moran's I test ---------------------------------------------------------------
 
 # save plots under
-plot_path <- "output/plots/ghg/"
+plot_path <- "output/plots/ghg_select/"
 theme_set(theme_minimal())
 
 ## 1. Create proper W matrix
@@ -43,28 +43,30 @@ perform_spatial_tests <- function(dep_var = dep_var, data = data) {
     data_test <- data %>% 
       dplyr::select(-edgar) %>% 
       dplyr::rename(edgar = all_of(dep_var))
+  } else {
+    data_test <- data
   }
   
   ols_base <- readRDS(sprintf("./output/regressions/OLS_%s.rds", dep_var))
-  ols_cntr <- readRDS(sprintf("./output/regressions/OLS_%s_cntr.rds", dep_var))
+  # ols_cntr <- readRDS(sprintf("./output/regressions/OLS_%s_cntr.rds", dep_var))
   
   ## 2. Moran's I Test
   moran.test(data_test$edgar, lw_knn) %>% print()
   moran.test(data_test$edgar, lw_inversedist) %>% print()
   moran.test(data_test$edgar, lw_inversedist_all) %>% print()
   moran.test(data_test$edgar, lw_queen) %>% print()
-  
+
   moran.test(ols_base$residuals, lw_knn) %>% print()
-  moran.test(ols_cntr$residuals, lw_knn) %>% print()
-  
+  # moran.test(ols_cntr$residuals, lw_knn) %>% print()
+
   moran.test(ols_base$residuals, lw_inversedist) %>% print()
-  moran.test(ols_cntr$residuals, lw_inversedist) %>% print()
-  
+  # moran.test(ols_cntr$residuals, lw_inversedist) %>% print()
+
   moran.test(ols_base$residuals, lw_inversedist_all) %>% print()
-  moran.test(ols_cntr$residuals, lw_inversedist_all) %>% print()
-  
+  # moran.test(ols_cntr$residuals, lw_inversedist_all) %>% print()
+
   moran.test(ols_base$residuals, lw_queen) %>% print()
-  moran.test(ols_cntr$residuals, lw_queen) %>% print()
+  # moran.test(ols_cntr$residuals, lw_queen) %>% print()
   
   # Local Moran's I Test ---------------------------------------------------------
   
@@ -104,25 +106,27 @@ perform_spatial_tests <- function(dep_var = dep_var, data = data) {
     ggsave(path = plot_path, filename = sprintf(plot_template, subtitle), scale=1, width = 4, height = 5)
   }
   
-  plot_localmoran_sig(data_test$edgar, data_test, lw = lw_knn, subtitle = sprintf("%s / k-nearest-neighbours",dep_var))
-  plot_localmoran_sig(data_test$edgar, data_test, lw = lw_inversedist, subtitle = sprintf("%s / KNN-inverse-distance",dep_var))
-  plot_localmoran_sig(data_test$edgar, data_test, lw = lw_inversedist_all, subtitle = sprintf("%s / inverse-distance",dep_var))
-  plot_localmoran_sig(data_test$edgar, data_test, lw = lw_queen, subtitle = sprintf("%s / queen",dep_var))
+  # plot_localmoran_sig(data_test$edgar, data_test, lw = lw_knn, subtitle = sprintf("%s / k-nearest-neighbours",dep_var))
+  # plot_localmoran_sig(data_test$edgar, data_test, lw = lw_inversedist, subtitle = sprintf("%s / KNN-inverse-distance",dep_var))
+  # plot_localmoran_sig(data_test$edgar, data_test, lw = lw_inversedist_all, subtitle = sprintf("%s / inverse-distance",dep_var))
+  # plot_localmoran_sig(data_test$edgar, data_test, lw = lw_queen, subtitle = sprintf("%s / queen",dep_var))
   
-  plot_localmoran_sig(ols_base$residuals, data_test, lw = lw_knn, subtitle = sprintf("%s OLS residuals / k-nearest-neighbours",dep_var))
-  plot_localmoran_sig(ols_cntr$residuals, data_test, lw = lw_knn, subtitle = sprintf("%s OLS CFE residuals / k-nearest-neighbours", dep_var))
+  # plot_localmoran_sig(ols_base$residuals, data_test, lw = lw_knn, subtitle = sprintf("%s OLS residuals / k-nearest-neighbours",dep_var))
+  # plot_localmoran_sig(ols_cntr$residuals, data_test, lw = lw_knn, subtitle = sprintf("%s OLS CFE residuals / k-nearest-neighbours", dep_var))
   
   plot_localmoran_sig(ols_base$residuals, data_test, lw = lw_inversedist, subtitle = sprintf("%s OLS residuals / inverse distance", dep_var))
-  plot_localmoran_sig(ols_cntr$residuals, data_test, lw = lw_inversedist, subtitle = sprintf("%s OLS CFE residuals / inverse distance", dep_var))
-  
+  # plot_localmoran_sig(ols_cntr$residuals, data_test, lw = lw_inversedist, subtitle = sprintf("%s OLS CFE residuals / inverse distance", dep_var))
+
   plot_localmoran_sig(ols_base$residuals, data_test, lw = lw_inversedist_all, subtitle = sprintf("%s OLS residuals / inverse distance all", dep_var))
-  plot_localmoran_sig(ols_cntr$residuals, data_test, lw = lw_inversedist_all, subtitle = sprintf("%s OLS CFE residuals / inverse distance all", dep_var))
-  
+  # plot_localmoran_sig(ols_cntr$residuals, data_test, lw = lw_inversedist_all, subtitle = sprintf("%s OLS CFE residuals / inverse distance all", dep_var))
+
   plot_localmoran_sig(ols_base$residuals, data_test, lw = lw_queen, subtitle = sprintf("%s OLS residuals / queen", dep_var))
-  plot_localmoran_sig(ols_cntr$residuals, data_test, lw = lw_queen, subtitle = sprintf("%s OLS CFE residuals / queen", dep_var))
+  # plot_localmoran_sig(ols_cntr$residuals, data_test, lw = lw_queen, subtitle = sprintf("%s OLS CFE residuals / queen", dep_var))
 }
 
-for(dep_var in dep_variables) {
+dep_variables2 <- dep_variables
+# dep_variables2 <- ghg_aggregate_over_sector
+for(dep_var in dep_variables2) {
   # try is here because sometimes we have no regression result or not enough rows
   try ( perform_spatial_tests(dep_var, data) )
 }
@@ -168,7 +172,9 @@ make_model_recommendation <- function(lm_test) {
   return(result)
 }
 
-for(dep_var in dep_variables) {
+dep_variables2 <- dep_variables
+# dep_variables2 <- ghg_aggregate_over_sector
+for(dep_var in dep_variables2) {
   
   print(dep_var)
   
@@ -190,9 +196,9 @@ for(dep_var in dep_variables) {
   # with queen contiguity we observe p=0.01262 for RLMlag implying that a lag makes sense
   
   # different models with lw_spatial
-  lm.LMtests(ols_cntr, lw_spatial, test = c("all")) %>% make_model_recommendation %>% print # error!
+  lm.LMtests(ols_cntr, lw_spatial, test = c("all")) %>% make_model_recommendation %>% print # SEM
   # lm.LMtests(ols_maup, lw_spatial, test = c("all")) # 
-  lm.LMtests(ols_no_density, lw_spatial, test = c("all")) %>% make_model_recommendation %>% print # -> error (even with queen)
+  lm.LMtests(ols_no_density, lw_spatial, test = c("all")) %>% make_model_recommendation %>% print # -> SEM (even with queen)
   
   # test remaining neighbourhoods
   lm.LMtests(ols_base, lw_queen, test = c("all")) %>% make_model_recommendation %>% print # suggests SAC (p-value = 0.01262)
