@@ -61,6 +61,43 @@ plot_quantiles <- function(variable_name, data, s = F, shape_nuts0 = shape_nuts0
   
   return(p)
 }
+# plot a continuous variable
+plot_c <- function(variable_name, data, s = F, shape_nuts0 = shape_nuts0,
+                   plot_path = plot_path, plot_template = plot_template,
+                   direction = -1, pct = TRUE) {
+  data <- data %>% dplyr::rename(var = all_of(variable_name))
+  my_plot <- ggplot(data = data) + 
+    geom_sf_pattern(data = shape_nuts0, colour = 'black', fill = 'white', pattern = 'stripe',                    
+                    pattern_size = 0.5, pattern_linetype = 1, pattern_spacing = 0.008,                    
+                    pattern_fill = "white", pattern_density = 0.1, pattern_alpha = 0.7) + 
+    geom_sf(aes(fill = var), color = "white", size=0.01)
+  
+  if(pct) { my_plot <- my_plot + scale_fill_viridis_c(option = "magma", direction = -1, labels = percent) 
+  } else {  my_plot <- my_plot + scale_fill_viridis_c(option = "magma", direction = -1) }
+  
+  my_plot <- my_plot +
+    theme(legend.title = element_blank()) +
+    geom_sf(data=shape_nuts0, color='#000000', fill=NA, size=0.1) + 
+    theme(plot.margin=grid::unit(c(0,0,0,0), "cm"))
+  if(s) ggsave(my_plot, path = plot_path, filename = sprintf(plot_template, variable_name), width = 4, height = 5)
+  return(my_plot)
+}
+# plot a discrete variable
+plot_d <- function(variable_name, data, s = F, shape_nuts0 = shape_nuts0,
+                   plot_path = plot_path, plot_template = plot_template,
+                   direction = -1) {
+  data <- data %>% dplyr::rename(var = all_of(variable_name))
+  my_plot <- ggplot(data = data) + 
+    geom_sf_pattern(data = shape_nuts0, colour = 'black', fill = 'white', pattern = 'stripe',                    
+                    pattern_size = 0.5, pattern_linetype = 1, pattern_spacing = 0.008,                    
+                    pattern_fill = "white", pattern_density = 0.1, pattern_alpha = 0.7) + 
+    geom_sf(aes(fill = var), color = "white", size=0.01) +
+    scale_fill_viridis_d(option = "magma", direction = direction) +  
+    theme(legend.title = element_blank()) +
+    geom_sf(data=shape_nuts0, color='#000000', fill=NA, size=0.1) + 
+    theme(plot.margin=grid::unit(c(0,0,0,0), "cm"))
+  if(s) ggsave(my_plot, path = plot_path, filename = sprintf(plot_template, variable_name), width = 4, height = 5)
+}
 
 ## EDGAR data ------------------------------------------------------------------
 files <- list.files("output/plots/all_ghg")
@@ -69,16 +106,11 @@ files <- str_replace(files, "raw_", "")
 
 dep_variables2 <- dep_variables[!dep_variables %in% files]
 
+# this takes a while so it makes sense to parallelize it
 cl <- makeCluster(parallel::detectCores())
 parLapply(cl = cl, dep_variables2, plot_quantiles, data = data, s = s, 
           shape_nuts0 = shape_nuts0, plot_path = paste0(plot_path, "all_ghg/"), plot_template = plot_template)
 stopCluster(cl)
-
-# for(dep_var in dep_variables2){
-#   print(dep_var)
-#   plot_quantiles(variable_name = dep_var, data = data, s = s, 
-#                  shape_nuts0 = shape_nuts0, plot_path = paste0(plot_path, "all_ghg/"), plot_template = plot_template)
-# }
 
 ## GDP p.c. --------------------------------------------------------------------
 no_classes <- 5
@@ -110,27 +142,6 @@ gdp <- ggplot(data = data) +
   theme(plot.margin=grid::unit(c(0,0,0,0), "cm")) 
 if(s) ggsave(gdp ,path = plot_path, filename = sprintf(plot_template, "GDPpc_quantiles"), width = 5, height = 5)
 
-plot_c <- function(variable_name, data, s = F, shape_nuts0 = shape_nuts0,
-                     plot_path = plot_path, plot_template = plot_template,
-                     direction = -1, pct = TRUE) {
-    data <- data %>% dplyr::rename(var = all_of(variable_name))
-    my_plot <- ggplot(data = data) + 
-      geom_sf_pattern(data = shape_nuts0, colour = 'black', fill = 'white', pattern = 'stripe',                    
-                      pattern_size = 0.5, pattern_linetype = 1, pattern_spacing = 0.008,                    
-                      pattern_fill = "white", pattern_density = 0.1, pattern_alpha = 0.7) + 
-      geom_sf(aes(fill = var), color = "white", size=0.01)
-    
-    if(pct) { my_plot <- my_plot + scale_fill_viridis_c(option = "magma", direction = -1, labels = percent) 
-    } else {  my_plot <- my_plot + scale_fill_viridis_c(option = "magma", direction = -1) }
-    
-    my_plot <- my_plot +
-      theme(legend.title = element_blank()) +
-      geom_sf(data=shape_nuts0, color='#000000', fill=NA, size=0.1) + 
-      theme(plot.margin=grid::unit(c(0,0,0,0), "cm"))
-    if(s) ggsave(my_plot, path = plot_path, filename = sprintf(plot_template, variable_name), width = 4, height = 5)
-    return(my_plot)
-}
-
 ## employment shares -----------------------------------------------------------
 plot_c(variable_name = "gva_share_A", data = data, s = s, shape_nuts0 = shape_nuts0, 
        plot_path = plot_path, plot_template = plot_template, direction = -1)
@@ -141,6 +152,7 @@ plot_c(variable_name = "gva_share_F", data = data, s = s, shape_nuts0 = shape_nu
 plot_c(variable_name = "gva_share_GJ", data = data, s = s, shape_nuts0 = shape_nuts0, 
        plot_path = plot_path, plot_template = plot_template, direction = -1)
 
+## renewable energy shares -----------------------------------------------------
 plot_c(variable_name = "REN", data = data, s = s, shape_nuts0 = shape_nuts0, 
        plot_path = plot_path, plot_template = plot_template, direction = -1)
 plot_c(variable_name = "REN_ELC", data = data, s = s, shape_nuts0 = shape_nuts0, 
@@ -149,6 +161,13 @@ plot_c(variable_name = "REN_HEAT_CL", data = data, s = s, shape_nuts0 = shape_nu
        plot_path = plot_path, plot_template = plot_template, direction = -1)
 plot_c(variable_name = "REN_TRA", data = data, s = s, shape_nuts0 = shape_nuts0, 
        plot_path = plot_path, plot_template = plot_template, direction = -1)
+
+## population shares -----------------------------------------------------------
+plot_c(variable_name = "pop_share_Y_GE65", data = data, s = s, shape_nuts0 = shape_nuts0, 
+       plot_path = plot_path, plot_template = plot_template, direction = -1)
+plot_c(variable_name = "pop_share_Y15_64", data = data, s = s, shape_nuts0 = shape_nuts0, 
+       plot_path = plot_path, plot_template = plot_template, direction = -1)
+
 
 # possibly only relevant for presentation: combined GDP & GVA share 
 # GDP_GVA <- plot_grid(gdp, gva, ncol = 2)
@@ -244,32 +263,12 @@ pop_dens <- plot_grid(pop, dens, ncol = 2)
 if(s) ggsave(pop_dens, path = plot_path, filename = sprintf(plot_template, "Pop_Dens"), width = 10, height = 6)
 
 # plot some discrete variables -------------------------------------------------
-
-plot_d <- function(variable_name, data, s = F, shape_nuts0 = shape_nuts0,
-                   plot_path = plot_path, plot_template = plot_template,
-                   direction = -1) {
-  data <- data %>% dplyr::rename(var = all_of(variable_name))
-  my_plot <- ggplot(data = data) + 
-    geom_sf_pattern(data = shape_nuts0, colour = 'black', fill = 'white', pattern = 'stripe',                    
-                    pattern_size = 0.5, pattern_linetype = 1, pattern_spacing = 0.008,                    
-                    pattern_fill = "white", pattern_density = 0.1, pattern_alpha = 0.7) + 
-    geom_sf(aes(fill = var), color = "white", size=0.01) +
-    scale_fill_viridis_d(option = "magma", direction = direction) +  
-    theme(legend.title = element_blank()) +
-    geom_sf(data=shape_nuts0, color='#000000', fill=NA, size=0.1) + 
-    theme(plot.margin=grid::unit(c(0,0,0,0), "cm"))
-  if(s) ggsave(my_plot, path = plot_path, filename = sprintf(plot_template, variable_name), width = 4, height = 5)
-}
-
 plot_d(variable_name = "urbn_type", data = data, s = s, shape_nuts0 = shape_nuts0, 
        plot_path = plot_path, plot_template = plot_template, direction = -1)
 plot_d(variable_name = "coast_type", data = data, s = s, shape_nuts0 = shape_nuts0, 
        plot_path = plot_path, plot_template = plot_template, direction = -1)
 plot_d(variable_name = "mount_type", data = data, s = s, shape_nuts0 = shape_nuts0, 
        plot_path = plot_path, plot_template = plot_template, direction = 1)
-
-
-
 
 # Summary table ----------------------------------------------------------------
 sum_data <- st_drop_geometry(data)
@@ -353,8 +352,16 @@ plot_mosaic <- function(data, sector_detail = c("sector_name", "category", "cate
   data_m <- data_m %>% 
     dplyr::left_join(read.csv("input/edgar/edgar_sectors.csv")[,c("short", sector_detail)],
                      by = c("sector" = "short")) %>% 
-    dplyr::select(-sector) %>% 
+    dplyr::rename(short = sector) %>% 
+    # dplyr::select(-sector) %>% 
     dplyr::rename(sector = all_of(sector_detail))
+  
+  # group all transport sectors into one
+  data_m <- data_m %>% 
+    dplyr::mutate(sector = ifelse(grepl("TNR", short), ifelse(sector_detail != "category_main", "Transport", "Energy - Transport"), sector)) %>% 
+    dplyr::mutate(sector = ifelse(grepl("TRO", short), ifelse(sector_detail != "category_main", "Transport", "Energy - Transport"), sector)) %>% 
+    dplyr::mutate(sector = ifelse(sector == "Energy", "Energy - Industry", sector)) %>% 
+    dplyr::mutate(sector = ifelse(sector == "Fuel combustion activities", "Fuel combustion activities - Industry", sector))
   
   data_m <- data_m %>% dplyr::select(sector, ghg, value)
   
