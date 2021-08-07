@@ -10,6 +10,11 @@ run_ols <- function(dep_var, data, data_nuts2, ghg_aggregate_over_sector) {
   
   base_variables <- c(
     "log(pop)",
+    "log(pop_share_Y15_64)",
+    # "log(pop_share_Y20_34)",
+    # "log(pop_share_Y35_49)",
+    # "log(pop_share_Y50_64)",
+    "log(pop_share_Y_GE65)",
     "log(density)",
     "log_gdppc",
     "I(log_gdppc^2)",
@@ -21,27 +26,29 @@ run_ols <- function(dep_var, data, data_nuts2, ghg_aggregate_over_sector) {
     "log(cdd_fix)",
     "log(REN)",
     "urbn_type",
-    "coast_type",
-    "mount_type"
+    "coast_type" #,
+    # "mount_type"
   )
   
-  base_labels <- c(
-    "log(pop)",
-    "log(density)",
-    "log(gdppc)",
-    "I(log(gdppc)^2)",
-    "log(gva_share_A)",
-    "log(gva_share_BE)",
-    "log(gva_share_F)",
-    "log(gva_share_GJ)",
-    "log(hdd)",
-    "log(cdd_fix)",
-    "log(REN)",
-    # the following have multiple labels
-    "urbn_type",
-    "coast_type",
-    "mount_type"
-  )
+  # base_labels <- c(
+  #   "log(pop)",
+  #   "log(pop_share_Y15_64)",
+  #   "log(pop_share_Y_GE65)",
+  #   "log(density)",
+  #   "log(gdppc)",
+  #   "I(log(gdppc)^2)",
+  #   "log(gva_share_A)",
+  #   "log(gva_share_BE)",
+  #   "log(gva_share_F)",
+  #   "log(gva_share_GJ)",
+  #   "log(hdd)",
+  #   "log(cdd_fix)",
+  #   "log(REN)",
+  #   # the following have multiple labels
+  #   "urbn_type",
+  #   "coast_type" #,
+  #   # "mount_type"
+  # )
   
   model_base <- as.formula(paste(dep_variable, "~", paste(base_variables, collapse= "+")))
   
@@ -76,16 +83,16 @@ run_ols <- function(dep_var, data, data_nuts2, ghg_aggregate_over_sector) {
   
   saveRDS(ols_base, file = sprintf("./output/regressions/OLS_%s.rds", dep_var))
   
-  if(dep_var %in% ghg_aggregate_over_sector) {
-    # check for MAUP
-    ols_maup <- lm(as.formula(paste(dep_variable, "~", paste(base_variables[!(base_variables %in% c("urbn_type",
-                                                                                                    "coast_type",
-                                                                                                    "mount_type"))], collapse= "+"))), 
-                   data_nuts2)
-    output <- summary(ols_maup)
-    saveRDS(ols_base, file = sprintf("./output/regressions/OLS_%s_maup.rds", dep_var))
-    cat(paste(output), file = sprintf("./output/tables/OLS_%s_maup.txt", dep_var), sep = "\n")
-  }
+  # if(dep_var %in% ghg_aggregate_over_sector) {
+  #   # check for MAUP
+  #   ols_maup <- lm(as.formula(paste(dep_variable, "~", paste(base_variables[!(base_variables %in% c("urbn_type",
+  #                                                                                                   "coast_type",
+  #                                                                                                   "mount_type"))], collapse= "+"))), 
+  #                  data_nuts2)
+  #   output <- summary(ols_maup)
+  #   saveRDS(ols_base, file = sprintf("./output/regressions/OLS_%s_maup.rds", dep_var))
+  #   cat(paste(output), file = sprintf("./output/tables/OLS_%s_maup.txt", dep_var), sep = "\n")
+  # }
   
   # Model with country dummies ---------------------------------------------------
   model_cntr <- as.formula(paste(dep_variable, "~", paste(base_variables[base_variables!="log(REN)"], collapse= "+"), " + cntr_code"))
@@ -153,6 +160,8 @@ run_ols <- function(dep_var, data, data_nuts2, ghg_aggregate_over_sector) {
 # dep_variables2 <- dep_variables[grepl("edgar_co2", tolower(dep_variables))]
 dep_variables2 <- dep_variables
 # dep_variables2 <- ghg_aggregate_over_sector
+# dep_variables2 <- "edgar_CO2_long_ENE"
+# dep_variables2 <- "edgar_co2"
 
 # lapply(dep_variables2, run_ols, data = data, data_nuts2 = data_nuts2, ghg_aggregate_over_sector = ghg_aggregate_over_sector)
 # 
@@ -163,6 +172,12 @@ dep_variables2 <- dep_variables
 cl <- makeCluster(parallel::detectCores())
 parLapply(cl = cl, dep_variables2, run_ols, data = data, data_nuts2 = data_nuts2, ghg_aggregate_over_sector = ghg_aggregate_over_sector)
 stopCluster(cl)
+
+readRDS("output/regressions/OLS_edgar_co2.rds")->test
+summary(test)
+
+readRDS("output/regressions/OLS_edgar_CO2_long_NMM.rds")->test
+summary(test)
 
 get_coef_from_file <- function(file_rds, all_coef_names) {
   ols <- readRDS(file_rds)
@@ -177,10 +192,14 @@ get_coef_from_file <- function(file_rds, all_coef_names) {
   return(coefs)
 }
 
+file_rds <- list.files("output/regressions", pattern = "OLS_edgar*", full.names = T)
 files_regressions_no_density <- list.files("output/regressions", pattern = "_no_density.rds", full.names = T)
 all_coef_names <- readRDS(file_rds[1]) %>% coef %>% names
 
 regressions_no_density <- lapply(files_regressions_no_density, get_coef_from_file, all_coef_names = all_coef_names)
+regressions_all <- lapply(file_rds, get_coef_from_file, all_coef_names = all_coef_names)
+
+coef_names <- regressions_no_density[[1]] %>% names
 
 short_names <- list.files("output/regressions", pattern = "_no_density.rds", full.names = F) %>% 
   # str_replace("OLS_edgar_", "") %>% 
@@ -188,5 +207,15 @@ short_names <- list.files("output/regressions", pattern = "_no_density.rds", ful
 
 df <- data.frame(matrix(unlist(regressions_no_density), nrow=length(regressions_no_density[[1]]), byrow=FALSE))
 
-rownames(df) <- c(all_coef_names, "nobs")
+rownames(df) <- coef_names
 colnames(df) <- short_names
+
+df <- t(df)
+
+df <- df[df[,"nobs"] == 1092,]
+
+summary(df[,"log_gdppc"])
+summary(df[,"nobs"])
+
+summary(df)
+

@@ -1,6 +1,6 @@
 # setup ------------------------------------------------------------------------
 year_single <- 2016
-year_filter <- c(2000:2018)
+year_filter <- c(2007:2018) # age groups are only available from 2007 onwards
 
 # get independent variables ----------------------------------------------------
 # shapefile
@@ -144,12 +144,6 @@ data_filter_outlier <- data %>%
 #   dplyr::left_join(edgar_input[,c("cntr_code", "ISO_A3", "2016")], by = "cntr_code") %>%
 #   dplyr::mutate(scale = edgar/`2016`/1e3) # gigagramms in t: 1e3
 
-summary(data)
-saveRDS(data, "input/data.rds")
-saveRDS(data_panel, "input/data_panel.rds")
-saveRDS(data_fix_outlier, "input/data_fix_outlier.rds")
-saveRDS(data_filter_outlier, "input/data_filter_outlier.rds")
-
 # Create dataset for NUTS2 Analysis (MAUP)--------------------------------------
 data_nuts2 <- data
 data_nuts2$nuts2_id <- substr(data_nuts2$nuts3_id, 1, 4) 
@@ -188,7 +182,7 @@ gva_nuts2 <- gva_nuts2 %>%
   dplyr::mutate(gvashare = values / values_total) %>% 
   dplyr::select(nace_r2, geo, time, gvashare) %>% 
   dplyr::mutate(time = format(as.Date(time, format="%Y/%m/%d"),"%Y")) %>% 
-  dplyr::filter(time == year_filter) %>% 
+  dplyr::filter(time == year_single) %>% 
   dplyr::mutate(nace_r2 = gsub("-", "", nace_r2),
                 nace_r2 = paste0("gva_share_",nace_r2)) %>% 
   dplyr::select(indicator = nace_r2, nuts2_id = geo, year = time, value = gvashare) %>% 
@@ -231,10 +225,12 @@ data <- data %>%
   dplyr::mutate(log_gdppc = log(gdppc) - mean(log(gdppc)))
 data_nuts2 <- data_nuts2 %>% 
   dplyr::mutate(log_gdppc = log(gdppc) - mean(log(gdppc)))
+data_panel <- data_panel %>% 
+  dplyr::mutate(log_gdppc = log(gdppc) - mean(log(gdppc)))
 
 # Summary stats for paper  -----------------------------------------------------
-dep_var <- c("edgar", "edgar_co2", "edgar_co2_short", "edgar_co2_total", "edgar_ch4", "edgar_n2o")
-dep_var_label <- c("GHG", "CO2 excl short", "CO2 short", "CO2 total", "CH4", "N2O")
+dep_var <- c("edgar", "edgar_co2_total", "edgar_ch4", "edgar_n2o")
+dep_var_label <- c("GHG", "CO2 total", "CH4", "N2O")
 
 temp <- st_drop_geometry(data) %>% 
   dplyr::select(all_of(dep_var), pop, density, gdppc,
@@ -256,10 +252,16 @@ stargazer(temp, digits = 2, median = TRUE, out = "output/tables/summary_abs.tex"
 # Create cor tables ------------------------------------------------------------
 temp <- st_drop_geometry(data)
 # correlation of actual values
-cortab <- cor(temp %>% dplyr::select(edgar = all_of(dep_var), pop, density, gdppc, 
+cortab <- cor(temp %>% dplyr::select(edgar = all_of(dep_var), 
+                                     pop, pop_share_Y15_64, pop_share_Y_GE65,
+                                     density, gdppc, 
                                      gva_share_A, gva_share_BE, gva_share_F, gva_share_GJ, 
                                      hdd, cdd_fix))
-rownames(cortab) <-  colnames(cortab) <- c(dep_var, "Population", "Density", "GDP/cap",
+rownames(cortab) <-  colnames(cortab) <- c(dep_var, 
+                                           "Population",
+                                           "Population share (15-64)",
+                                           "Population share (65+)",
+                                           "Density", "GDP/cap",
                                            "GVA A", "GVA BE", "GVA F", "GVA GJ",
                                            "HDD", "CDD")
 stargazer(cortab, column.sep.width = "0pt",
@@ -273,6 +275,8 @@ temp_dep <- temp %>%
 temp_log <- temp %>% 
   dplyr::mutate(
     pop = log(pop),
+    pop_share_Y15_64 = log(pop_share_Y15_64),
+    pop_share_Y_GE65 = log(pop_share_Y_GE65),
     gdppc = log_gdppc,
     gdppc2 = log_gdppc^2,
     density = log(density),
@@ -283,13 +287,26 @@ temp_log <- temp %>%
     hdd = log(hdd),
     cdd_fix = log(cdd_fix))
 cortab.log <- cor(cbind(temp_log, temp_dep) %>% 
-                    dplyr::select(all_of(dep_var), pop, density, gdppc, gdppc2,
+                    dplyr::select(all_of(dep_var), 
+                                  pop, pop_share_Y15_64, pop_share_Y_GE65,
+                                  density, gdppc, gdppc2,
                                   starts_with("gva_share_"), hdd, cdd_fix))
 rownames(cortab.log) <- colnames(cortab.log) <- 
-  c(dep_var_label, "Population", "Density", "GDP/cap", "GDP/cap, squared", 
+  c(dep_var_label, "Population", "Population share (15-64)", "Population share (65+)",
+    "Density", "GDP/cap", "GDP/cap, squared", 
     "GVA A", "GVA BE", "GVA F", "GVA GJ",
     "HDD", "CDD")
 
 stargazer(cortab.log, column.sep.width = "0pt",
-          title = "Correlation of Model Variables",
+          title = "Correlation of logged model variables",
           out = "output/tables/summary_cor_log.tex")
+
+# check for correlation between urban type and urbanisation
+data$urbn_type_1 <- ifelse(data$urbn_type == "1", 1, 0)
+polycor::hetcor(data %>% st_drop_geometry %>%  dplyr::select(density, urbn_type_1))
+
+summary(data)
+saveRDS(data, "input/data.rds")
+saveRDS(data_panel, "input/data_panel.rds")
+saveRDS(data_fix_outlier, "input/data_fix_outlier.rds")
+saveRDS(data_filter_outlier, "input/data_filter_outlier.rds")
