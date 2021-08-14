@@ -19,10 +19,11 @@ data_heating_cooling <- readRDS("input/data_heating_cooling.rds") %>%
 # get emission data ------------------------------------------------------------
 
 # prepare to transform CH4 and N2O to "tonnes CO2 equivalents"
+# https://ec.europa.eu/eurostat/statistics-explained/index.php?title=Glossary:Carbon_dioxide_equivalent
 is_not_co2 <- c("CH4", "N2O")
 transform_to_co2_eq <- function(value, type) {
   factor <- switch(type,
-                   "CH4" = 84,
+                   "CH4" = 25,
                    "N2O" = 298)
   return(value*factor)
 }
