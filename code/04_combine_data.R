@@ -41,7 +41,9 @@ data_edgar <- readRDS("input/data_edgar_all.rds") %>%
                                transform_to_co2_eq(value, "N2O"), 
                                value)) %>% 
   # exclude CH4_PRO_COAL, OIL, GAS since they are already contained in CH4_PRO
-  dplyr::filter(!grepl("edgar_CH4_PRO_", indicator, fixed = TRUE))
+  dplyr::filter(!grepl("edgar_CH4_PRO_", indicator, fixed = TRUE)) %>% 
+  # in case there are any NA values in the edgar data, replace them with 0
+  dplyr::mutate(value = ifelse(is.na(value), 0, value))
 
 # add total sectoral GHG emissions
 sectors <- read.csv("input/edgar/edgar_sectors.csv")$short
@@ -305,6 +307,69 @@ stargazer(cortab.log, column.sep.width = "0pt",
 # check for correlation between urban type and urbanisation
 data$urbn_type_1 <- ifelse(data$urbn_type == "1", 1, 0)
 polycor::hetcor(data %>% st_drop_geometry %>%  dplyr::select(density, urbn_type_1))
+
+# ------------------------------------------------------------------------------
+# include sector aggregates in the data panel
+
+sector_detail <- "category_main"
+
+data_m <- data_panel %>% 
+  dplyr::select(year, 
+                nuts3_id,
+                starts_with("edgar_"),
+                # -starts_with("edgar_GHG"),
+                # small caps is only totals
+                -starts_with("edgar_co2", ignore.case = FALSE),
+                -edgar_n2o, -edgar_ch4
+  ) %>% 
+  tidyr::pivot_longer(cols = starts_with("edgar_"), #c(nuts3_id, cntr_code, year),
+                      names_to = "indicator")
+
+data_m <- data_m %>% 
+  dplyr::mutate(ghg = get_ghg_name_from_indicator(indicator),
+                sector = get_sector_name_from_indicator(indicator))
+
+# now we join the sectors list to either aggregate by 
+# sector name, category or even main category
+data_m <- data_m %>% 
+  dplyr::left_join(read.csv("input/edgar/edgar_sectors.csv")[,c("short", sector_detail)],
+                   by = c("sector" = "short")) %>% 
+  dplyr::rename(short = sector) %>% 
+  # dplyr::select(-sector) %>% 
+  dplyr::rename(sector = all_of(sector_detail))
+
+# group all transport sectors into one
+data_m <- data_m %>% 
+  dplyr::mutate(sector = ifelse(grepl("TNR", short), ifelse(sector_detail != "category_main", "Transport", "Energy - Transport"), sector)) %>% 
+  dplyr::mutate(sector = ifelse(grepl("TRO", short), ifelse(sector_detail != "category_main", "Transport", "Energy - Transport"), sector)) %>% 
+  dplyr::mutate(sector = ifelse(sector == "Energy", "Energy - Industry", sector)) %>% 
+  dplyr::mutate(sector = ifelse(sector == "Fuel combustion activities", "Fuel combustion activities - Industry", sector))
+
+data_ghg_sector_longer <- data_m %>% 
+  dplyr::group_by(year, ghg, sector, nuts3_id) %>% 
+  dplyr::summarise(value = sum(value, na.rm = TRUE)) %>% 
+  dplyr::ungroup() %>% 
+  dplyr::mutate(
+    sector = gsub(" ", "", sector),
+    sector = gsub("-", "", sector),
+    sector = gsub(",", "", sector),
+    indicator = sprintf("edgar_agg_%s_%s", ghg, sector)
+  )
+
+data_ghg_sector <- data_ghg_sector_longer %>% 
+  dplyr::select(year, nuts3_id, value, indicator) %>% 
+  tidyr::pivot_wider(id_cols = c("year", "nuts3_id"), names_from = "indicator")
+
+rm(data_m)
+
+data <- data %>% cbind(data_ghg_sector %>% filter(year == year_single))
+data_panel <- data_panel %>% cbind(data_ghg_sector)
+
+dep_variables <- colnames(data)[grepl("edgar", colnames(data))]
+dep_variables_agg_ghg <- colnames(data)[grepl("edgar_agg_GHG_", colnames(data))]
+dep_variables_agg <- colnames(data)[grepl("edgar_agg_", colnames(data))]
+
+# ------------------------------------------------------------------------------
 
 summary(data)
 saveRDS(data, "input/data.rds")
