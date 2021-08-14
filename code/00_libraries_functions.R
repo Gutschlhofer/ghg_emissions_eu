@@ -1,3 +1,5 @@
+rm(list = ls()) # clean environment
+
 # Load libraries
 # install.packages("pacman")
 library(pacman) # download and load, load only if already downloaded
