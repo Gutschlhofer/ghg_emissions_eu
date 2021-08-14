@@ -52,7 +52,8 @@ plot_stack <- function(data, sector_detail = c("sector_name", "category", "categ
                      by = c("sector" = "short")) %>% 
     dplyr::rename(short = sector) %>% 
     # dplyr::select(-sector) %>% 
-    dplyr::rename(sector = all_of(sector_detail))
+    dplyr::rename(sector = all_of(sector_detail)) %>% 
+    dplyr::filter(!is.na(sector))
   
   # group all transport sectors into one
   data_m <- data_m %>% 
@@ -84,10 +85,14 @@ plot_stack <- function(data, sector_detail = c("sector_name", "category", "categ
   plot <- data_m %>% 
     dplyr::filter(value != 0) %>% 
     dplyr::group_by(sector, year) %>% 
-    dplyr::summarise(value = sum(value)) %>% 
-    ggplot(aes(x=year, y=value, fill=sector)) +
+    dplyr::summarise(value = sum(value)) %>%   
+    dplyr::mutate(value = value / 1e9) %>% # transform to billion tonnes co2 equiv
+    dplyr::rename(Sector = sector) %>% 
+    ggplot(aes(x=year, y=value, fill=Sector)) +
     geom_area() +
-    scale_fill_viridis_d()
+    scale_fill_viridis_d() +
+    ylab(bquote('billion tonnes ' ~CO[2]* '-eq/year')) +
+    xlab("")
   
   if(s) ggsave(plot = plot, device = NULL, path = plot_path, filename = sprintf(plot_template, paste0("sector_panel_stack_", sector_detail)), width = ifelse(sector_detail == "category", 12, 8), height = 5)
 }
