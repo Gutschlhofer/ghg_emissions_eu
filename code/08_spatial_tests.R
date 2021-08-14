@@ -174,6 +174,8 @@ make_model_recommendation <- function(lm_test) {
 
 dep_variables2 <- dep_variables
 # dep_variables2 <- ghg_aggregate_over_sector
+
+capture.output(
 for(dep_var in dep_variables2) {
   
   print(dep_var)
@@ -205,3 +207,14 @@ for(dep_var in dep_variables2) {
   lm.LMtests(ols_base, lw_inversedist_all, test = c("all")) %>% make_model_recommendation %>% print # suggests SAC (p-value = 0.03701)
   lm.LMtests(ols_base, lw_knn, test = c("all")) %>% make_model_recommendation %>% print # SEM
 }
+, file = "code/08b_model_recommendations.txt")
+
+recommendations <- read_lines("code/08b_model_recommendations.txt")
+# remove unnecessary parts
+recommendations <- gsub('[1]', "", recommendations, fixed = T)
+recommendations <- gsub(' \"', "", recommendations)
+recommendations <- gsub('\"', "", recommendations)
+# exclude variable names
+recommendations <- recommendations[!grepl("edgar", recommendations)]
+# show distribution of recommendations
+table(recommendations)
