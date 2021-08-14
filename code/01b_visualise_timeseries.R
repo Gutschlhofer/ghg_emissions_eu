@@ -8,7 +8,7 @@ data_aggregates <- data_edgar %>%
                 year = as.numeric(year)) %>%
   dplyr::group_by(name, year) %>%
   dplyr::summarise(value = sum(value)) %>%
-  dplyr::rename(ghg = name)
+  dplyr::rename(GHG = name)
 data_sectors <- data_edgar %>%
   dplyr::select(year, starts_with("edgar_")) %>%
   dplyr::select(-edgar_n2o, -edgar_co2, -edgar_co2_short, -edgar_ch4, -edgar_co2_total) %>%
@@ -20,16 +20,27 @@ data_sectors <- data_edgar %>%
                 year = as.numeric(year)) %>%
   dplyr::group_by(name, year) %>%
   dplyr::summarise(value = sum(value, na.rm=T)) %>%
-  dplyr::rename(ghg = name)
+  dplyr::rename(GHG = name)
 plot_aggregates <- data_aggregates %>%
   # filter(ghg %in% c("edgar_co2")) %>% 
-  ggplot(aes(x=year, y=value, fill=ghg)) +
+  ggplot(aes(x=year, y=value, fill=GHG)) +
   geom_area() +
-  scale_fill_viridis_d(); plot_aggregates
-ggsave(plot_aggregates, path = "output/plots/", filename = "raw_ghg_panel_stack_aggregates.png", scale=1, width = 5, height = 5)
+  scale_fill_viridis_d()
+plot_aggregates
+ggsave(plot_aggregates, path = "output/plots/", filename = "raw_ghg_panel_stack_aggregates.png", scale=1, width = 8, height = 5)
+
 plot_sectors <- data_sectors %>%
-  # filter(ghg %in% c("CO2_l")) %>%
-  ggplot(aes(x=year, y=value, fill=ghg)) +
+  dplyr::mutate(value = value / 1e9) %>% # transform to billion tonnes co2 equiv
+  ggplot(aes(x=year, y=value, fill=GHG)) +
   geom_area() +
-  scale_fill_viridis_d(); plot_sectors
-ggsave(plot_sectors, path = "output/plots/", filename = "raw_ghg_panel_stack.png", scale=1, width = 5, height = 5)
+  # add subscripts to legend
+  scale_fill_viridis_d(labels=c(CO2_l=expression(paste(CO[2]*l)),
+                                CO2_s=expression(paste(CO[2]*s)),
+                                CH4=expression(paste(CH[4])),
+                                N2O=expression(~N[2]*O))) +
+  ylab(bquote('billion tonnes ' ~CO[2]* '-eq/year')) +
+  xlab("") +
+  theme(legend.text.align = 0)
+
+plot_sectors
+ggsave(plot_sectors, path = "output/plots/", filename = "raw_ghg_panel_stack.png", scale=1, width = 8, height = 5)
