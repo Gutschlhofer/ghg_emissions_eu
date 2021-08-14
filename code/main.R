@@ -29,6 +29,14 @@ source("code/05_visualise_input.R")
 # Run OLS ----------------------------------------------------------------------
 source("code/06_model_OLS.R")
 
-
 # Prepare and run GWR ----------------------------------------------------------
 source("code/07_model_GWR.R")
+
+# Run spatial tests ------------------------------------------------------------
+source("code/08_spatial_tests.R")
+
+# Run spatial models -----------------------------------------------------------
+source("code/09_model_spatial.R")
+
+# Run (spatial) panel models ---------------------------------------------------
+source("code/10_panel.R")
