@@ -100,27 +100,41 @@ data <- data %>%
     cdd_fix = cdd + 1 # move our scale by 1 to be able to log it
   )
 
-# test <- data %>% filter(gva_share_F %>% is.na) # it's Sweden
+# # check for an exclude countries with missing values in 2016
+# data %>% filter(gva_share_F %>% is.na, year == 2016) %>% pull(cntr_code) %>% unique()
+# data %>% filter(gdppc %>% is.na, year == 2016) %>% pull(cntr_code) %>% unique()
+# data %>% filter(pop %>% is.na, year == 2016) %>% pull(cntr_code) %>% unique()
+# data %>% filter(heating_or_cooling %>% is.na, year == 2016) %>% pull(cntr_code) %>% unique()
 
+# exclude countries for data availability reasons and/or for being an island
 exclude <- c(
-  # exclude so we have gdp, population and GVA share BE
-  "NO","CH", "TR", "RS", "IE", "UK", "LI", "MT",
-  # exclude so we have CDD,HDD
-  "AL","MK","ME",
-  # since March 2021, Sweden is missing NUTS3 level GVA shares
-  "SE"
+  "AL" # CDD, HDD
+  , "CH" # gdppc, gva_share
+  , "IE" # island, gdppc, gva_share
+  , "LI" # CDD, HDD, gdppc, gva_share
+  , "ME" # CDD, HDD
+  , "MK" # CDD, HDD
+  , "MT" # island
+  , "NO" # pop, gva_share, gdppc not available
+  , "RS" # pop, CDD, HDD
+  , "SE" # since March 2021, Sweden is missing NUTS3 level GVA shares
+  , "TR" # CDD, HDD
+  , "UK" # island, gdppc, gva_share
 )
 data <- data %>% dplyr::filter(!cntr_code %in% exclude)
 
-# remove some observations that have no direct neighbours (for queen contiguity)
-# no_neigh <- c(505:506,521,539,570:571,608)
+# data %>% pull(cntr_code) %>% unique %>% sort
+
+# # remove some observations that have no direct neighbours (for queen contiguity)
+# lw_queen <- poly2nb(data %>% dplyr::filter(year == 2016), queen = TRUE) # 7 regions with no links: 505 506 521 539 570 571 608
+# (data %>% dplyr::filter(year == 2016))[c(505,506,521,539,570,571,608),] %>% pull(nuts3_id) %>% unique
 no_neigh <- c("EL623", "EL624", "DK014", "FI200", "EL621", "EL622", "DK031")
-data <- data[!data$nuts3_id %in% no_neigh,]
+data <- data %>% dplyr::filter(!(nuts3_id %in% no_neigh))
 
 data_panel <- data
 data <- data %>% dplyr::filter(year == year_single)
 
-# fix outliers
+# some treatment for outliers in new data objects
 data[data$edgar > quantile(data$edgar,0.99),]$edgar
 
 data_fix_outlier <- data %>% 
@@ -362,8 +376,10 @@ data_ghg_sector <- data_ghg_sector_longer %>%
 
 rm(data_m)
 
-data <- data %>% cbind(data_ghg_sector %>% filter(year == year_single))
-data_panel <- data_panel %>% cbind(data_ghg_sector)
+data <- data %>% 
+  dplyr::left_join(data_ghg_sector %>% filter(year == year_single), by = c("nuts3_id", "year"))
+data_panel <- data_panel %>% 
+  dplyr::left_join(data_ghg_sector, by = c("nuts3_id", "year"))
 
 dep_variables <- colnames(data)[grepl("edgar", colnames(data))]
 dep_variables_agg_ghg <- colnames(data)[grepl("edgar_agg_GHG_", colnames(data))]

@@ -102,7 +102,6 @@ if(! file.exists("./input/data_eurostat.rds")) {
   # PPP standards and PPP per capita are chosen here, other alternatives woud be:
   #   Million Euros (unit = "MIO_EUR")
   #   Million PPS (unit = "MIO_PPS_EU27_2020")
-  
   gdp <- get_eurostat("nama_10r_3gdp", filters = list(unit = "MIO_PPS_EU27_2020")) %>% 
     dplyr::filter(nchar(geo) == 5) 
   gdp$time <- format(as.Date(gdp$time, format="%Y/%m/%d"),"%Y") 
@@ -185,14 +184,14 @@ if(! file.exists("./input/data_eurostat.rds")) {
   
   rm(gva_total)
   
-  # Download Renewable Energy Shares -------------------------------------------
+  # 5.) Renewable Energy Shares -------------------------------------------
   # only available on a country level
   shares <- get_eurostat("nrg_ind_ren") %>% 
     dplyr::filter(nchar(geo) == 2) %>% 
     dplyr::mutate(time = format(as.Date(time, format="%Y/%m/%d"),"%Y")) %>% 
     dplyr::select(unit = nrg_bal, geo, time, values)
   
-  shares <- pop %>% dplyr::select(nuts3_id, year) %>% 
+  shares <- gdppc %>% dplyr::select(nuts3_id = geo, year = time) %>% 
     distinct(nuts3_id, year) %>% 
     dplyr::mutate(cntr_id = substr(nuts3_id, 1,2),
                   year = as.character(year)) %>% 
@@ -204,20 +203,12 @@ if(! file.exists("./input/data_eurostat.rds")) {
     dplyr::filter(!is.na(nuts3_id)) %>% 
     dplyr::mutate(value = value/100) # to make it range from 0-1
   
-  # Download Data additional data (not used in analysis):-----------------------
-  # 1.) People at risk of poverty or social exclusion 
-  # Only available on NUTS2, so not added to main data for now
-  socexcl <- get_eurostat("ilc_peps11") %>% 
-    dplyr::filter(nchar(geo) == 4)
-  socexcl$time <- format(as.Date(socexcl$time, format="%Y/%m/%d"),"%Y")
-  socexcl$unit <- "socexcl"
-  
-  #2.) Annual road transport data
+  # 6.) Annual road transport data
   # The data is available per:
-  #region of loading
-  #region of unloading
-  #I used the sum of both for both (unloading and loading) for final data
-  #maybe the data should be put in relative terms to GDP or something else later on
+  # region of loading
+  # region of unloading
+  # I used the sum of both for both (unloading and loading) for final data
+  # maybe the data should be put in relative terms to GDP or something else later on
   
   # National annual road freight transport by regions of loading (NUTS 3) and by group of goods (1 000 t), from 2008 onwards
   roadload <- get_eurostat("road_go_na_rl3g") %>% 
@@ -242,12 +233,12 @@ if(! file.exists("./input/data_eurostat.rds")) {
   
   # Combine Data and save:--------------------------------------------------------
   
-  #combine
+  # combine
   fineurostat <- rbind(gdp, gdppc, empl, gva, road)
   colnames(fineurostat) <- c("indicator","nuts3_id", "year", "value")
   fineurostat <- rbind(pop, shares, fineurostat)
   
-  #save
+  # save
   saveRDS(fineurostat, "./input/data_eurostat.rds")
 }
 
