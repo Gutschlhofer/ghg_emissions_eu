@@ -30,26 +30,6 @@ run_ols <- function(dep_var, data, data_nuts2, ghg_aggregate_over_sector) {
     # "mount_type"
   )
   
-  # base_labels <- c(
-  #   "log(pop)",
-  #   "log(pop_share_Y15_64)",
-  #   "log(pop_share_Y_GE65)",
-  #   "log(density)",
-  #   "log(gdppc)",
-  #   "I(log(gdppc)^2)",
-  #   "log(gva_share_A)",
-  #   "log(gva_share_BE)",
-  #   "log(gva_share_F)",
-  #   "log(gva_share_GJ)",
-  #   "log(hdd)",
-  #   "log(cdd_fix)",
-  #   "log(REN)",
-  #   # the following have multiple labels
-  #   "urbn_type",
-  #   "coast_type" #,
-  #   # "mount_type"
-  # )
-  
   model_base <- as.formula(paste(dep_variable, "~", paste(base_variables, collapse= "+")))
   
   if(any(is.na(data %>% st_drop_geometry %>% pull(dep_var)))) {
@@ -212,10 +192,73 @@ colnames(df) <- short_names
 
 df <- t(df)
 
+df_tmp <- df
 df <- df[df[,"nobs"] == 1092,]
 
 summary(df[,"log_gdppc"])
+summary(df[,"log(pop)"])
 summary(df[,"nobs"])
 
 summary(df)
+
+# ------------------
+# extract data for GHG agg sectors
+
+file_rds <- list.files("output/regressions", pattern = "OLS_edgar_agg_GHG*", full.names = T)
+files_regressions_base <- file_rds[!(file_rds %>% grepl("_no_density.rds", .) | 
+                                       file_rds %>% grepl("_cntr.rds", .))]
+
+files_regressions_no_density <- file_rds[file_rds %>% grepl("_no_density.rds", .)]
+all_coef_names <- readRDS(file_rds[1]) %>% coef %>% names
+
+regressions_no_density <- lapply(files_regressions_no_density, get_coef_from_file, all_coef_names = all_coef_names)
+regressions_all <- lapply(file_rds, get_coef_from_file, all_coef_names = all_coef_names)
+regressions_base <- lapply(files_regressions_base, get_coef_from_file, all_coef_names = all_coef_names)
+
+coef_names <- regressions_no_density[[1]] %>% names
+
+short_names <- files_regressions_no_density %>% 
+  str_replace("output/regressions/OLS_edgar_agg_GHG_", "") %>%
+  str_replace("_no_density", "") %>% 
+  str_replace(".rds", "")
+
+df <- data.frame(matrix(unlist(regressions_no_density), nrow=length(regressions_no_density[[1]]), byrow=FALSE))
+rownames(df) <- coef_names
+colnames(df) <- short_names
+
+df <- t(df)
+df
+
+# ------------------
+# extract data for agg sectors
+
+file_rds <- list.files("output/regressions", pattern = "OLS_edgar_agg_*", full.names = T)
+files_regressions_base <- file_rds[!(file_rds %>% grepl("_no_density.rds", .) | 
+                                       file_rds %>% grepl("_cntr.rds", .))]
+
+files_regressions_no_density <- file_rds[file_rds %>% grepl("_no_density.rds", .)]
+all_coef_names <- readRDS(file_rds[1]) %>% coef %>% names
+
+regressions_no_density <- lapply(files_regressions_no_density, get_coef_from_file, all_coef_names = all_coef_names)
+regressions_all <- lapply(file_rds, get_coef_from_file, all_coef_names = all_coef_names)
+regressions_base <- lapply(files_regressions_base, get_coef_from_file, all_coef_names = all_coef_names)
+
+coef_names <- regressions_no_density[[1]] %>% names
+
+short_names <- files_regressions_no_density %>% 
+  str_replace("output/regressions/OLS_edgar_agg_", "") %>%
+  str_replace("_no_density", "") %>% 
+  str_replace(".rds", "")
+
+df <- data.frame(matrix(unlist(regressions_no_density), nrow=length(regressions_no_density[[1]]), byrow=FALSE))
+rownames(df) <- coef_names
+colnames(df) <- short_names
+
+df <- t(df)
+summary(df)
+
+# readRDS(files_regressions_base[1])->test; summary(test)
+# 
+# readRDS("output/regressions/OLS_edgar.rds")->test; summary(test)
+
 
