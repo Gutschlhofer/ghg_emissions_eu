@@ -106,30 +106,34 @@ perform_spatial_tests <- function(dep_var = dep_var, data = data) {
     ggsave(path = plot_path, filename = sprintf(plot_template, subtitle), scale=1, width = 4, height = 5)
   }
   
-  # plot_localmoran_sig(data_test$edgar, data_test, lw = lw_knn, subtitle = sprintf("%s / k-nearest-neighbours",dep_var))
-  # plot_localmoran_sig(data_test$edgar, data_test, lw = lw_inversedist, subtitle = sprintf("%s / KNN-inverse-distance",dep_var))
-  # plot_localmoran_sig(data_test$edgar, data_test, lw = lw_inversedist_all, subtitle = sprintf("%s / inverse-distance",dep_var))
-  # plot_localmoran_sig(data_test$edgar, data_test, lw = lw_queen, subtitle = sprintf("%s / queen",dep_var))
-  
-  # plot_localmoran_sig(ols_base$residuals, data_test, lw = lw_knn, subtitle = sprintf("%s OLS residuals / k-nearest-neighbours",dep_var))
-  # plot_localmoran_sig(ols_cntr$residuals, data_test, lw = lw_knn, subtitle = sprintf("%s OLS CFE residuals / k-nearest-neighbours", dep_var))
-  
-  plot_localmoran_sig(ols_base$residuals, data_test, lw = lw_inversedist, subtitle = sprintf("%s OLS residuals / inverse distance", dep_var))
-  # plot_localmoran_sig(ols_cntr$residuals, data_test, lw = lw_inversedist, subtitle = sprintf("%s OLS CFE residuals / inverse distance", dep_var))
-
-  plot_localmoran_sig(ols_base$residuals, data_test, lw = lw_inversedist_all, subtitle = sprintf("%s OLS residuals / inverse distance all", dep_var))
-  # plot_localmoran_sig(ols_cntr$residuals, data_test, lw = lw_inversedist_all, subtitle = sprintf("%s OLS CFE residuals / inverse distance all", dep_var))
-
-  plot_localmoran_sig(ols_base$residuals, data_test, lw = lw_queen, subtitle = sprintf("%s OLS residuals / queen", dep_var))
-  # plot_localmoran_sig(ols_cntr$residuals, data_test, lw = lw_queen, subtitle = sprintf("%s OLS CFE residuals / queen", dep_var))
+  # # plot_localmoran_sig(data_test$edgar, data_test, lw = lw_knn, subtitle = sprintf("%s / k-nearest-neighbours",dep_var))
+  # # plot_localmoran_sig(data_test$edgar, data_test, lw = lw_inversedist, subtitle = sprintf("%s / KNN-inverse-distance",dep_var))
+  # # plot_localmoran_sig(data_test$edgar, data_test, lw = lw_inversedist_all, subtitle = sprintf("%s / inverse-distance",dep_var))
+  # # plot_localmoran_sig(data_test$edgar, data_test, lw = lw_queen, subtitle = sprintf("%s / queen",dep_var))
+  # 
+  # # plot_localmoran_sig(ols_base$residuals, data_test, lw = lw_knn, subtitle = sprintf("%s OLS residuals / k-nearest-neighbours",dep_var))
+  # # plot_localmoran_sig(ols_cntr$residuals, data_test, lw = lw_knn, subtitle = sprintf("%s OLS CFE residuals / k-nearest-neighbours", dep_var))
+  # 
+  # plot_localmoran_sig(ols_base$residuals, data_test, lw = lw_inversedist, subtitle = sprintf("%s OLS residuals / inverse distance", dep_var))
+  # # plot_localmoran_sig(ols_cntr$residuals, data_test, lw = lw_inversedist, subtitle = sprintf("%s OLS CFE residuals / inverse distance", dep_var))
+  # 
+  # plot_localmoran_sig(ols_base$residuals, data_test, lw = lw_inversedist_all, subtitle = sprintf("%s OLS residuals / inverse distance all", dep_var))
+  # # plot_localmoran_sig(ols_cntr$residuals, data_test, lw = lw_inversedist_all, subtitle = sprintf("%s OLS CFE residuals / inverse distance all", dep_var))
+  # 
+  # plot_localmoran_sig(ols_base$residuals, data_test, lw = lw_queen, subtitle = sprintf("%s OLS residuals / queen", dep_var))
+  # # plot_localmoran_sig(ols_cntr$residuals, data_test, lw = lw_queen, subtitle = sprintf("%s OLS CFE residuals / queen", dep_var))
 }
 
 dep_variables2 <- dep_variables
 # dep_variables2 <- ghg_aggregate_over_sector
+# dep_variables2 <- dep_variables_agg
+
+capture.output(
 for(dep_var in dep_variables2) {
   # try is here because sometimes we have no regression result or not enough rows
   try ( perform_spatial_tests(dep_var, data) )
 }
+, file = "code/08a_moran_tests.txt")
 # until incl edgar_CH4_MNM
   
 # 3. Model selection tests -----------------------------------------------------
@@ -218,3 +222,4 @@ recommendations <- gsub('\"', "", recommendations)
 recommendations <- recommendations[!grepl("edgar", recommendations)]
 # show distribution of recommendations
 table(recommendations)
+
