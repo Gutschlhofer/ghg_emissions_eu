@@ -2,7 +2,7 @@
 lw_spatial <- lw_queen
 lw_spatial <- lw_inversedist
 
-dep_variable <- "log(edgar_co2)"
+dep_variable <- "log(edgar)"
 
 # 1. Model with everything
 base_variables <- c(
@@ -28,12 +28,6 @@ model_base <- as.formula(paste(dep_variable, "~", paste(base_variables, collapse
 model_cntr <- as.formula(paste(dep_variable, "~", paste(base_variables[base_variables!="log(REN)"], collapse= "+"), " + cntr_code"))
 model_base_no_density <- as.formula(paste(dep_variable, "~", paste(base_variables[base_variables!="log(density)"], collapse= "+")))
 
-
-# Then we test downwards
-
-# Also we need a pooled model soon!
-
-# also other dep variables
 
 model_mess <- spatialreg::lagmess(model_base, data = data, listw = lw_spatial)
 summary(model_mess)
@@ -73,43 +67,15 @@ summary(sacsarlm(model_base_n2o, data, listw = lw_spatial))
 summary(sacsarlm(model_base_ch4, data, listw = lw_spatial))
 
 
-# negative rho (-.2, positive lambda .7)
-
-# Rho: -0.2019
-# Asymptotic standard error: 0.052748
-# z-value: -3.8276, p-value: 0.00012942
-# Lambda: 0.73791
-# Asymptotic standard error: 0.032176
-# z-value: 22.933, p-value: < 2.22e-16
-# 
-# LR test value: 251.36, p-value: < 2.22e-16
-# --> this should mean that it's better than the comparison models
-# 
-# Log likelihood: -960.146 for sac model
-# ML residual variance (sigma squared): 0.29207, (sigma: 0.54044)
-# Number of observations: 1092 
-# Number of parameters estimated: 14 
-# AIC: 1948.3, (AIC for lm: 2195.7)
-
 sac_gmm <- gstsls(model_base, data, listw = lw_spatial)
 summary(sac_gmm)
-sac_gmm # again negative rho
+sac_gmm
 
 ####
 
 # now let's try a SEM, then a SAR
 model_sem <- spatialreg::errorsarlm(model_base, data = data, listw = lw_spatial)
 summary(model_sem, Hausman = TRUE)
-# Lambda: 0.64495, LR test value: 236.66, p-value: < 2.22e-16
-# Asymptotic standard error: 0.02793
-# z-value: 23.092, p-value: < 2.22e-16
-# Wald statistic: 533.22, p-value: < 2.22e-16
-# 
-# Log likelihood: -967.4956 for error model
-# ML residual variance (sigma squared): 0.31095, (sigma: 0.55763)
-# Number of observations: 1092 
-# Number of parameters estimated: 13 
-# AIC: 1961, (AIC for lm: 2195.7)
 
 HausmanTest <- Hausman.test(model_sem)
 HausmanTest
@@ -118,18 +84,6 @@ HausmanTest
 
 model_sar <- spatialreg::lagsarlm(model_base, data = data, listw = lw_spatial)
 summary(model_sar)
-# Rho: 0.2868, LR test value: 80.426, p-value: < 2.22e-16
-# Asymptotic standard error: 0.028923
-# z-value: 9.9162, p-value: < 2.22e-16
-# Wald statistic: 98.331, p-value: < 2.22e-16
-# 
-# Log likelihood: -1045.614 for lag model
-# ML residual variance (sigma squared): 0.3907, (sigma: 0.62506)
-# Number of observations: 1092 
-# Number of parameters estimated: 13 
-# AIC: 2117.2, (AIC for lm: 2195.7)
-# LM test for residual autocorrelation
-# test value: 101.61, p-value: < 2.22e-16
 
 LR.Sarlm(model_sac, model_sar)
 LR.Sarlm(model_sar, model_sac)
@@ -141,11 +95,7 @@ model_sdem <- spatialreg::errorsarlm(model_base,
                                      listw = lw_spatial, 
                                      etype = "emixed")
 model_sdem %>% summary()
-# only significant lag:
-#                       Estimate Std. Error  z value  Pr(>|z|)
-# log(density)         -0.416501   0.027539 -15.1242 < 2.2e-16
-# lag.log(density)      0.251348   0.049941   5.0329 4.830e-07
-
+# no significant lag
 
 # spatial filtering ------------------------------------------------------------
 # but, do spatial methods actually help overcome our probable problem of varying coefficients in GWR?

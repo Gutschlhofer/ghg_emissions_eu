@@ -1,5 +1,8 @@
-# load data
+# # uncomment these to run as job
+# setwd("..")
+# source("code/00_libraries_functions.R", local = TRUE)
 # data <- readRDS("input/data.rds")
+# dep_variables <- colnames(data)[grepl("edgar", colnames(data))]
 
 # ensure that all plots have the same theme
 theme_set(theme_minimal())

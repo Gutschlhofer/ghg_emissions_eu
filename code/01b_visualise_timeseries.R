@@ -1,4 +1,7 @@
 # some preliminary visualisations to check consistency between aggregate data (data_edgar) and sectoral data (data_edgar_all)
+# ensure that all plots have the same theme
+theme_set(theme_minimal())
+
 # before running this, run the data_edgar code in 04_combine_data.R
 data_aggregates <- data_edgar %>%
   dplyr::select(year, edgar_n2o, edgar_co2, edgar_co2_short, edgar_ch4) %>%
