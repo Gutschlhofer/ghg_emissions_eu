@@ -1,5 +1,10 @@
+# # uncomment this to run as a job
+# setwd("..")
+# source("code/00_libraries_functions.R", local = TRUE)
+
 # setup ------------------------------------------------------------------------
 year_filter <- 2002:2018
+year_single <- 2018
 
 # get data ---------------------------------------------------------------------
 data_panel <- readRDS("input/data_panel.rds")
@@ -10,7 +15,7 @@ summary(data_panel)
 
 gg_miss_var(data_panel, show_pct = TRUE)
 # notes:
-# gva:share has much better coverage than emp_share
+# gva_share has much better coverage than emp_share
 
 # Visualise panel --------------------------------------------------------------
 # ensure that all plots have the same theme
@@ -19,6 +24,7 @@ theme_set(theme_minimal())
 # save plots under
 plot_path <- "output/plots/"
 plot_template <- paste0("raw_%s",".png")
+s <- TRUE
 
 plot_stack <- function(data, sector_detail = c("sector_name", "category", "category_main")) {
   
@@ -105,48 +111,28 @@ plot_stack(data_panel, "sector_name")
 plot_stack(data_panel, "category")
 plot_stack(data_panel, "category_main")
 
+# France is missing GDP/cap values until 2014
+source("./code/02b_impute_gdppc.R", local = TRUE)
+# Some NUTS3 regions are missing their population
+source("./code/02a_impute_population.R", local = TRUE)
 
-missing_gdp <- data_panel %>% 
-  dplyr::filter(is.na(gdp))
+# impute GVA shares for 2007-2014 for France 
+# because we'd need to discard all observations from France otherwise
+# since GVA shares don't change all that much that shouldn't change a lot
+data_panel <- data_panel %>% 
+  dplyr::group_by(nuts3_id) %>% 
+  # first_year is the same for all gva_shares
+  dplyr::mutate(first_year = min(year[!is.na(gva_share_GJ)],na.rm=T)) %>% 
+  dplyr::mutate(
+    gva_share_A = ifelse(is.na(gva_share_A), gva_share_A[year == first_year], gva_share_A),
+    gva_share_BE = ifelse(is.na(gva_share_BE), gva_share_BE[year == first_year], gva_share_BE),
+    gva_share_F = ifelse(is.na(gva_share_F), gva_share_F[year == first_year], gva_share_F),
+    gva_share_GJ = ifelse(is.na(gva_share_GJ), gva_share_GJ[year == first_year], gva_share_GJ)
+  ) %>% 
+  dplyr::ungroup()
 
-# ggplot(data = missing_gdp %>% 
-#          dplyr::group_by(nuts3_id) %>% 
-#          dplyr::summarise(count = length(unique(year)))) + 
-#   geom_sf_pattern(data = shape_nuts0, colour = 'black', fill = 'white', pattern = 'stripe',                    
-#                   pattern_size = 0.5, pattern_linetype = 1, pattern_spacing = 0.008,                    
-#                   pattern_fill = "white", pattern_density = 0.1, pattern_alpha = 0.7) + 
-#   geom_sf(aes(fill = count), color = "white", size=0.01) +
-#   scale_fill_viridis_c(option = "magma", direction = -1) +  
-#   theme(legend.title = element_blank()) +
-#   geom_sf(data=shape_nuts0, color='#000000', fill=NA, size=0.1) + 
-#   theme(plot.margin=grid::unit(c(0,0,0,0), "cm"))
-
-data_panel <- data_panel %>% dplyr::filter(!cntr_code %in% 
-                                             (missing_gdp %>% pull(cntr_code) %>% unique()))
-# perform some calculations
-# data_panel <- data_panel %>% 
-#   dplyr::mutate(
-#     density = (pop/area)/1000, # pop per m2, density in 1000people/km2
-#     heating_or_cooling = hdd + cdd,
-#     cdd_fix = cdd+1, # move our scale by 1 to be able to log it
-#     cdd_log = ifelse(cdd == 0, 0, log(cdd))
-#   )
-
-# # exclude so we have gdp, population and GVA share BE
-# exclude <- c("NO","CH", "TR", "RS", "IE", "UK", "LI", "MT")
-# data_panel <- data_panel[!data_panel$cntr_code%in%exclude,]
-# # exclude so we have CDD,HDD
-# exclude <- c("AL","MK","ME")
-# data_panel <- data_panel[!data_panel$cntr_code%in%exclude,]
-# 
-# # test <- data_panel %>% filter(gva_share_F %>% is.na) # it's Sweden
-# data_panel <- data_panel %>% dplyr::filter(cntr_code != "SE")
-# 
-# # this filters out regions in france that also don't have GDP
-# data_panel <- data_panel %>% dplyr::filter(!is.na(gva_share_BE))
-# 
-# summary(data_panel)
-
+# if any nuts3 region would not have values for all years, we would filter it now
+# but there are none
 not_all_years <- data_panel %>%
   st_drop_geometry %>% 
   dplyr::group_by(nuts3_id) %>% 
@@ -154,18 +140,38 @@ not_all_years <- data_panel %>%
   dplyr::arrange(n_row) %>% 
   dplyr::filter(n_row != max(n_row)) %>% 
   dplyr::pull(nuts3_id)
-
 data_panel <- data_panel %>% 
   dplyr::filter(!(nuts3_id %in% not_all_years))
 
+# create data-variable to create W matrices
 data_one_year <- data_panel %>% dplyr::filter(year == year_single)
+
+get_lw_inversedist <- function(data) {
+  data_one_year <- data %>% dplyr::filter(year == year_single)
+  
+  # # create W matrix for 
+  # lw_queen <- poly2nb(data_one_year, queen = TRUE) %>% 
+  #   nb2listw()
+  # inverse distance
+  data_coords <- st_coordinates(st_centroid(data_one_year$geometry))
+  k <- round(0.1 * nrow(data_one_year)) # use 10% of the data as neighbours (109)
+  lw_knn <- knearneigh(data_coords, k=k) %>% 
+    knn2nb()
+  
+  ### inverse distance (based on knn)
+  dlist <- nbdists(lw_knn, data_coords, longlat = TRUE)
+  idlist <- lapply(dlist, function(x) 1/x)
+  lw_inversedist <- nb2listw(lw_knn, glist=idlist, style="W")
+  
+  return(lw_inversedist)
+}
 
 # create W matrix for 
 lw_queen <- poly2nb(data_one_year, queen = TRUE) %>% 
   nb2listw()
 # inverse distance
 data_coords <- st_coordinates(st_centroid(data_one_year$geometry))
-k <- round(0.163404391231319 * nrow(data)) # use amount of neighbours determined by gwr_sel
+k <- round(0.1 * nrow(data_one_year)) # use 10% of the data as neighbours (109)
 lw_knn <- knearneigh(data_coords, k=k) %>% 
   knn2nb()
 
