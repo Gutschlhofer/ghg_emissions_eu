@@ -18,7 +18,8 @@ s <- T
 
 # divide into 5 quantiles + corresponding legend
 plot_quantiles <- function(variable_name, data, s = F, shape_nuts0 = shape_nuts0,
-                           plot_path = plot_path, plot_template = plot_template) {
+                           plot_path = plot_path, plot_template = plot_template,
+                           legend_title = "") {
   library(tidyverse)
   theme_set(theme_minimal())
   
@@ -32,9 +33,11 @@ plot_quantiles <- function(variable_name, data, s = F, shape_nuts0 = shape_nuts0
   
   labels <- c()
   for(idx in 1:length(quantiles)){
-    labels <- c(labels, paste0(round(quantiles[idx], -2),
+    round_digits <- ifelse(quantiles[2] < 10, ifelse(quantiles[2] < 2, 1, 0), -2)
+    
+    labels <- c(labels, paste0(round(quantiles[idx], round_digits),
                                " – ",
-                               round(quantiles[idx + 1], -2)))
+                               round(quantiles[idx + 1], round_digits)))
   }
   
   # remove the last label because that would be something like "100.000 - NA"
@@ -56,8 +59,8 @@ plot_quantiles <- function(variable_name, data, s = F, shape_nuts0 = shape_nuts0
       pattern_fill = "white", pattern_density = 0.1, pattern_alpha = 0.7) + 
     geom_sf(aes(fill = quantiles), color = "white", size=0.01) +
     viridis::scale_fill_viridis(direction = -1, discrete = TRUE) + 
-    guides(fill = guide_legend(reverse = TRUE)) +
-    theme(legend.title = element_blank()) +
+    guides(fill = guide_legend(reverse = TRUE, title = legend_title)) +
+    # theme(legend.title = element_blank()) +
     geom_sf(data=shape_nuts0, color='black', fill=NA, size=0.1) + 
     theme(plot.margin=grid::unit(c(0,0,0,0), "cm")) 
   if(s) ggsave(p, path = plot_path, filename = sprintf(plot_template, plot_name), scale=1, width = 5, height = 5)
@@ -114,6 +117,34 @@ cl <- makeCluster(parallel::detectCores())
 parLapply(cl = cl, dep_variables2, plot_quantiles, data = data, s = s, 
           shape_nuts0 = shape_nuts0, plot_path = paste0(plot_path, "all_ghg/"), plot_template = plot_template)
 stopCluster(cl)
+
+## relative GHG emissions ------------------------------------------------------
+p_area <- plot_quantiles(variable_name = "edgar_per_area", 
+                         data = data %>% dplyr::mutate(edgar_per_area = edgar/area), # GHG emissions t CO2-eq per km2
+                         s = s, 
+                         shape_nuts0 = shape_nuts0, 
+                         plot_path = paste0(plot_path), 
+                         plot_template = plot_template,
+                         legend_title = expression(paste(t~CO[2]-eq~per~km^2)))
+p_capita <- plot_quantiles(variable_name = "edgar_per_capita", 
+                           data = data %>% dplyr::mutate(edgar_per_capita = edgar/pop), # GHG emissions t CO2-eq per capita
+                           s = s, 
+                           shape_nuts0 = shape_nuts0, 
+                           plot_path = paste0(plot_path), 
+                           plot_template = plot_template,
+                           legend_title = expression(paste(t~CO[2]-eq~per~capita)))
+
+# combined per capita and per area plot
+per_a_c <- plot_grid(p_area, p_capita, ncol = 2)
+if(s) ggsave(plot = per_a_c, path = plot_path, filename = sprintf(plot_template, "edgar_per_area_capita"), width = 10, height = 5) 
+
+plot_quantiles(variable_name = "edgar_per_area_and_per_capita", 
+               data = data %>% dplyr::mutate(edgar_per_area_and_per_capita = edgar/pop/area*1e3), # GHG emissions kg CO2-eq per capita per km2
+               s = s, 
+               shape_nuts0 = shape_nuts0, 
+               plot_path = paste0(plot_path), 
+               plot_template = plot_template,
+               legend_title = expression(paste(kg~CO[2]-eq/capita/km^2)))
 
 ## GDP p.c. --------------------------------------------------------------------
 no_classes <- 5
@@ -424,11 +455,21 @@ plot_mosaic <- function(data, sector_detail = c("sector_name", "category", "cate
     theme(legend.position="right") +
     theme_bw() +
     scale_y_continuous(labels = scales::percent) +
-    # scale_x_list(position = "top", sec.axis = ggplot2::sec_axis(~.*sum(data_m$value/1000), breaks = graph_breaks, labels = graph_labels, name = expression("Mt CO"[2]*"e"))) +
-    scale_x_list(position = "top", sec.axis = ggplot2::sec_axis(~.*sum(data_m$value/1000), breaks = graph_breaks, labels = graph_labels)) +
+    scale_x_list(position = "top", 
+                 sec.axis = ggplot2::sec_axis(~.*sum(data_m$value/1000), 
+                                              breaks = graph_breaks, 
+                                              labels = c(
+                                                CH4=expression(paste(CH[4])),
+                                                CO2_l=expression(paste(CO[2]*l)),
+                                                CO2_s=expression(paste(CO[2]*s)),
+                                                N2O=expression(~N[2]*O)))) +
     # facet_grid(group~.) +
     labs(x = "", y = "") +
-    guides(fill=guide_legend(title = sector_detail, reverse = TRUE)) +
+    guides(fill=guide_legend(
+      title = switch(sector_detail,
+                     "sector_name" = "Sector",
+                     "category" = "Category",
+                     "category_main" = "Main category"), reverse = TRUE)) +
     viridis::scale_fill_viridis(discrete = TRUE)
   
   # # one can also add text inside the rectangles
@@ -439,6 +480,9 @@ plot_mosaic <- function(data, sector_detail = c("sector_name", "category", "cate
   
 }
 
-plot_mosaic(data, sector_detail = "sector_name")
-plot_mosaic(data, sector_detail = "category")
-plot_mosaic(data, sector_detail = "category_main")
+data_tmp <- data %>% dplyr::select(-all_of(dep_variables_agg))
+
+plot_mosaic(data_tmp, sector_detail = "sector_name")
+plot_mosaic(data_tmp, sector_detail = "category")
+plot_mosaic(data_tmp, sector_detail = "category_main")
+# plot_mosaic(data_panel %>% dplyr::select(-all_of(dep_variables_agg)), sector_detail = "category_main_panel")
