@@ -153,7 +153,7 @@ cl <- makeCluster(parallel::detectCores())
 parLapply(cl = cl, dep_variables2, run_ols, data = data, data_nuts2 = data_nuts2, ghg_aggregate_over_sector = ghg_aggregate_over_sector)
 stopCluster(cl)
 
-readRDS("output/regressions/OLS_edgar_co2.rds")->test
+readRDS("output/regressions/OLS_edgar_CO2f.rds")->test
 summary(test)
 
 readRDS("output/regressions/OLS_edgar_CO2_long_NMM.rds")->test

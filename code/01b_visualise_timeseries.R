@@ -4,7 +4,11 @@ theme_set(theme_minimal())
 
 # before running this, run the data_edgar code in 04_combine_data.R
 data_aggregates <- data_edgar %>%
-  dplyr::select(year, edgar_n2o, edgar_co2, edgar_co2_short, edgar_ch4) %>%
+  dplyr::select(year,
+                edgar_CO2f,
+                edgar_CO2o,
+                edgar_N2O, 
+                edgar_CH4) %>%
   # st_drop_geometry %>%
   pivot_longer(cols = starts_with("edgar")) %>%
   dplyr::mutate(name = as.factor(name),
@@ -14,7 +18,13 @@ data_aggregates <- data_edgar %>%
   dplyr::rename(GHG = name)
 data_sectors <- data_edgar %>%
   dplyr::select(year, starts_with("edgar_")) %>%
-  dplyr::select(-edgar_n2o, -edgar_co2, -edgar_co2_short, -edgar_ch4, -edgar_co2_total) %>%
+  dplyr::select(
+    -edgar_CO2total,
+    -edgar_CO2f,
+    -edgar_CO2o,
+    -edgar_N2O, 
+    -edgar_CH4
+  ) %>% 
   dplyr::select(-starts_with("edgar_GHG")) %>%
   # st_drop_geometry %>%
   pivot_longer(cols = starts_with("edgar")) %>%
@@ -37,10 +47,10 @@ plot_sectors <- data_sectors %>%
   ggplot(aes(x=year, y=value, fill=GHG)) +
   geom_area() +
   # add subscripts to legend
-  scale_fill_viridis_d(labels=c(CO2_l=expression(paste(CO[2]*l)),
-                                CO2_s=expression(paste(CO[2]*s)),
+  scale_fill_viridis_d(labels=c(CO2f=expression(paste(CO[2]*f)),
+                                CO2o=expression(paste(CO[2]*o)),
                                 CH4=expression(paste(CH[4])),
-                                N2O=expression(~N[2]*O))) +
+                                N2O=expression(N[2]*O))) +
   ylab(bquote('billion tonnes ' ~CO[2]* '-eq/year')) +
   xlab("") +
   theme(legend.text.align = 0)

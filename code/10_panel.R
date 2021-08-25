@@ -40,9 +40,11 @@ plot_stack <- function(data, sector_detail = c("sector_name", "category", "categ
     dplyr::select(year, 
                   starts_with("edgar_"),
                   -starts_with("edgar_GHG"),
-                  # small caps is only totals
-                  -starts_with("edgar_co2", ignore.case = FALSE),
-                  -edgar_n2o, -edgar_ch4
+                  -edgar_CO2total,
+                  -edgar_CO2f,
+                  -edgar_CO2o,
+                  -edgar_N2O, 
+                  -edgar_CH4
     ) %>% 
     tidyr::pivot_longer(cols = starts_with("edgar_"), #c(nuts3_id, cntr_code, year),
                         names_to = "indicator")
@@ -569,8 +571,8 @@ spatial_coefficients <- spatial_coefficients %>%
     ghg = ifelse(grepl("agg", ghg) & grepl("GHG_", dep_var), "GHG", ghg),
     ghg = ifelse(grepl("_CH4_", dep_var), "CH4", ghg),
     ghg = ifelse(grepl("_N2O_", dep_var), "N2O", ghg),
-    ghg = ifelse(grepl("_CO2_l", dep_var), "CO2", ghg),
-    ghg = ifelse(grepl("_CO2_s", dep_var), "CO2_s", ghg),
+    ghg = ifelse(grepl("_CO2f_", dep_var), "CO2f", ghg),
+    ghg = ifelse(grepl("_CO2o_", dep_var), "CO2o", ghg),
     ghg = toupper(ghg)
   )
 
@@ -612,8 +614,8 @@ for(i in unique(spatial_coefficients$ghg)) {
 fs <- list.files("output/regressions", pattern = "*.rds", full.names = T)
 fs <- fs[grepl("panel_sac_fixed_", fs)]
 fs <- fs[!grepl("panel_sac_fixed_west", fs)]
-fs <- fs[!grepl("co2.rds", fs)]
-fs <- fs[!grepl("co2_short.rds", fs)]
+fs <- fs[!grepl("CO2f.rds", fs)]
+fs <- fs[!grepl("CO2o.rds", fs)]
 
 reg <- readRDS("output/regressions/panel_sac_fixed_edgar.rds")
 summary(reg)

@@ -289,12 +289,12 @@ dens <- ggplot(data = data) +
   theme(legend.title = element_blank()) +
   geom_sf(data=shape_nuts0, color='#000000', fill=NA, size=0.1) + 
   theme(plot.margin=grid::unit(c(0,0,0,0), "cm"))
-if(s) ggsave(dens, path = plot_path, filename = sprintf(plot_template, "Density_quantiles"), width = 4, height = 5)
+if(s) ggsave(dens, path = plot_path, filename = sprintf(plot_template, "density_quantiles"), width = 4, height = 5)
 
 
 # pop_dens
 pop_dens <- plot_grid(pop, dens, ncol = 2)
-if(s) ggsave(pop_dens, path = plot_path, filename = sprintf(plot_template, "Pop_Dens"), width = 10, height = 6)
+if(s) ggsave(pop_dens, path = plot_path, filename = sprintf(plot_template, "pop_dens"), width = 10, height = 6)
 
 # plot some discrete variables -------------------------------------------------
 plot_d(variable_name = "urbn_type", data = data, s = s, shape_nuts0 = shape_nuts0, 
@@ -303,35 +303,6 @@ plot_d(variable_name = "coast_type", data = data, s = s, shape_nuts0 = shape_nut
        plot_path = plot_path, plot_template = plot_template, direction = -1)
 plot_d(variable_name = "mount_type", data = data, s = s, shape_nuts0 = shape_nuts0, 
        plot_path = plot_path, plot_template = plot_template, direction = 1)
-
-# Summary table ----------------------------------------------------------------
-sum_data <- st_drop_geometry(data)
-sum_data <- sum_data %>% dplyr::select(gdppc, density, gva_share_BE, edgar, hdd, cdd_fix)
-
-# st_options(descr.transpose = TRUE)
-# 
-# summary1 <- as.data.frame(descr(sum_data, 
-#                   stats= c("min", "q1", "mean", "med", "q3", "max", "sd"),
-#                   order = "p"))
-# 
-# rownames(summary1) <- c("GDP p.c.", "Population density", "Empl. share in manufact.", "CO² emission levels", "Heating Days Index", "Cooling Days Index")
-# summary1 <- round(summary1, 2)
-# summary1
-
-# equivalent to table 1 from videras
-sum_data_log <- log(sum_data)
-
-summary2 <- rbind(as.data.frame(descr(sum_data,
-                                stats = c("mean", "sd"),
-                                order = "p")),
-                    as.data.frame(descr(sum_data_log,
-                                stats = c("mean", "sd"),
-                                order = "p")))
-
-colnames(summary2) <- c("GDP p.c.", "Population density", "Empl. share in manufact.", "CO² emission levels", "HDD", "CDD")
-rownames(summary2) <- c("Mean (orig. values)", "Std.Dev (orig. values)", "Mean (log values)", "Std.Dev (log values)")
-summary2 <- round(summary2, 2)
-summary2
 
 ## EDGAR sector disaggregation -------------------------------------------------
 # mosaic plot by GHG, sector
@@ -370,9 +341,11 @@ plot_mosaic <- function(data, sector_detail = c("sector_name", "category", "cate
     dplyr::select(nuts3_id, cntr_code, year, 
                   starts_with("edgar_"),
                   -starts_with("edgar_GHG"),
-                  # small caps is only totals
-                  -starts_with("edgar_co2", ignore.case = FALSE),
-                  -edgar_n2o, -edgar_ch4
+                  -edgar_CO2total,
+                  -edgar_CO2f,
+                  -edgar_CO2o,
+                  -edgar_N2O, 
+                  -edgar_CH4
     ) %>% 
     tidyr::pivot_longer(cols = starts_with("edgar_"), #c(nuts3_id, cntr_code, year),
                         names_to = "indicator")
@@ -460,9 +433,9 @@ plot_mosaic <- function(data, sector_detail = c("sector_name", "category", "cate
                                               breaks = graph_breaks, 
                                               labels = c(
                                                 CH4=expression(paste(CH[4])),
-                                                CO2_l=expression(paste(CO[2]*l)),
-                                                CO2_s=expression(paste(CO[2]*s)),
-                                                N2O=expression(~N[2]*O)))) +
+                                                CO2f=expression(paste(CO[2]*f)),
+                                                CO2o=expression(paste(CO[2]*o)),
+                                                N2O=expression(N[2]*O)))) +
     # facet_grid(group~.) +
     labs(x = "", y = "") +
     guides(fill=guide_legend(

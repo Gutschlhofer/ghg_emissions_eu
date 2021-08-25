@@ -148,14 +148,14 @@ if(file.exists("./input/shapefile/nuts0.shp")) {
 # These functions are often used as prep for visualisations
 get_ghg_name_from_indicator <- function(indicator) {
   ind <- ifelse(grepl("CO2", indicator),
-                substr(indicator, 7, 11),
+                substr(indicator, 7, 10),
                 substr(indicator, 7, 9))
   return(ind)
 }
 get_sector_name_from_indicator <- function(indicator) {
-  start <- ifelse(grepl("CO2_short", indicator),
-                  17,
-                  ifelse(grepl("CO2_long", indicator), 16, 11))
+  start <- ifelse(grepl("CO2o", indicator) | grepl("CO2f", indicator),
+                  12, 
+                  11)
   
   sector <- substring(indicator, start)
   return(sector)

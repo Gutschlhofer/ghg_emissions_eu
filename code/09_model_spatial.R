@@ -59,14 +59,6 @@ model_sac
 
 impacts(model_sac, listw = lw_spatial)
 
-summary(sacsarlm(model_base_ghg, data, listw = lw_spatial))
-summary(sacsarlm(model_base_co2_total, data, listw = lw_spatial))
-summary(sacsarlm(model_base_co2, data, listw = lw_spatial))
-summary(sacsarlm(model_base_co2_short, data, listw = lw_spatial))
-summary(sacsarlm(model_base_n2o, data, listw = lw_spatial))
-summary(sacsarlm(model_base_ch4, data, listw = lw_spatial))
-
-
 sac_gmm <- gstsls(model_base, data, listw = lw_spatial)
 summary(sac_gmm)
 sac_gmm

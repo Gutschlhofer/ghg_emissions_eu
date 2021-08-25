@@ -155,25 +155,25 @@ if(! file.exists("./input/data_edgar.rds")) {
   
   dir.create("input/edgar")
   
-  # CO2-------------------------------------------------------------------------
+  # CO2 fossil -----------------------------------------------------------------
   get_edgar_data(download_link = "https://cidportal.jrc.ec.europa.eu/ftp/jrc-opendata/EDGAR/datasets/v60_GHG/CO2_excl_short-cycle_org_C/TOTALS/TOTALS_txt.zip",
                  file_name = "v60_CO2_excl_short-cycle_org_C_TOTALS.zip",
-                 short_name = "co2")
+                 short_name = "CO2f")
   
-  # CH4-------------------------------------------------------------------------
+  # CH4 ------------------------------------------------------------------------
   get_edgar_data(download_link = "https://cidportal.jrc.ec.europa.eu/ftp/jrc-opendata/EDGAR/datasets/v60_GHG/CH4/TOTALS/TOTALS_txt.zip",
                  file_name = "v60_CH4_TOTALS.zip",
-                 short_name = "ch4")
-  # N2O-------------------------------------------------------------------------
+                 short_name = "CH4")
+  # N2O ------------------------------------------------------------------------
   get_edgar_data(download_link = "https://cidportal.jrc.ec.europa.eu/ftp/jrc-opendata/EDGAR/datasets/v60_GHG/N2O/TOTALS/TOTALS_txt.zip",
                  file_name = "v60_N2O_TOTALS.zip",
-                 short_name = "n2o")
-  # CO2 short-------------------------------------------------------------------
+                 short_name = "N2O")
+  # CO2 organic ----------------------------------------------------------------
   get_edgar_data(download_link = "https://cidportal.jrc.ec.europa.eu/ftp/jrc-opendata/EDGAR/datasets/v60_GHG/CO2_org_short-cycle_C/TOTALS/TOTALS_txt.zip",
                  file_name = "v60_CO2_org_short-cycle_TOTALS.zip",
-                 short_name = "co2_short")
+                 short_name = "CO2o")
   
-  # Now sector-specific data----------------------------------------------------
+  # Now sector-specific data ---------------------------------------------------
   sector_info <- read.csv("input/edgar/edgar_sectors.csv") %>% 
     dplyr::filter(!short %in% c("PRO_COAL","PRO_GAS","PRO_OIL")) # those are all aggregated in "PRO"
   substances <- c("CH4", "CO2_excl_short-cycle_org_C", "CO2_org_short-cycle_C", "N2O")
@@ -202,10 +202,10 @@ if(! file.exists("./input/data_edgar.rds")) {
   }
   
   # rbind all
-  data_edgar <- rbind(readRDS("input/data_edgar_co2.rds"),
-                      readRDS("input/data_edgar_ch4.rds"),
-                      readRDS("input/data_edgar_n2o.rds"),
-                      readRDS("input/data_edgar_co2_short.rds"))
+  data_edgar <- rbind(readRDS("input/data_edgar_CO2f.rds"),
+                      readRDS("input/data_edgar_CH4.rds"),
+                      readRDS("input/data_edgar_N2O.rds"),
+                      readRDS("input/data_edgar_CO2o.rds"))
   saveRDS(data_edgar, "input/data_edgar.rds")
   
   fs <- list.files("input", pattern = "*.rds", full.names = T)
