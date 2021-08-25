@@ -1,5 +1,5 @@
 # setup ------------------------------------------------------------------------
-year_single <- 2016
+year_single <- 2018
 year_filter <- c(2007:2018) # age groups are only available from 2007 onwards
 
 # get independent variables ----------------------------------------------------
@@ -97,7 +97,9 @@ data <- data %>%
   dplyr::mutate(
     density = (pop/area)/1000, # pop per m2, density in 1000people/km2
     heating_or_cooling = hdd + cdd,
-    cdd_fix = cdd + 1 # move our scale by 1 to be able to log it
+    cdd_fix = cdd + 1, # move our scale by 1 to be able to log it
+    hdd_non_REN = hdd * (1-REN_HEAT_CL),
+    cdd_non_REN = cdd_fix * (1-REN_HEAT_CL)
   )
 
 # # check for an exclude countries with missing values in 2016
@@ -212,13 +214,13 @@ data_nuts2 <- dplyr::left_join(data_nuts2, gva_nuts2, by="nuts2_id")
 
 # gdp
 gdp_nuts2 <- get_eurostat("nama_10r_3gdp", filters = list(unit = "MIO_PPS_EU27_2020")) %>% 
-  filter(nchar(geo) == 4 & time == "2016-01-01") 
+  filter(nchar(geo) == 4 & time == "2018-01-01") 
 gdp_nuts2 <- gdp_nuts2 %>% dplyr::rename(nuts2_id = geo, gdp = values)
 data_nuts2 <- dplyr::left_join(data_nuts2, gdp_nuts2 %>% dplyr::select(-c(time, unit)), by="nuts2_id")
 
 # gdppc 
 gdppc_nuts2 <- get_eurostat("nama_10r_3gdp", filters = list(unit = "PPS_EU27_2020_HAB")) %>% 
-  filter(nchar(geo) == 4 & time == "2016-01-01")  
+  filter(nchar(geo) == 4 & time == "2018-01-01")  
 gdppc_nuts2 <- gdppc_nuts2 %>% dplyr::rename(nuts2_id = geo, gdppc = values)
 gdppc_nuts2$time <- format(as.Date(gdppc_nuts2$time, format="%Y/%m/%d"),"%Y")
 data_nuts2 <- dplyr::left_join(data_nuts2, gdppc_nuts2 %>% dplyr::select(-c(time, unit)), by="nuts2_id")
@@ -384,6 +386,11 @@ data_panel <- data_panel %>%
 dep_variables <- colnames(data)[grepl("edgar", colnames(data))]
 dep_variables_agg_ghg <- colnames(data)[grepl("edgar_agg_GHG_", colnames(data))]
 dep_variables_agg <- colnames(data)[grepl("edgar_agg_", colnames(data))]
+dep_variables_sel <- c("edgar", 
+                       "edgar_co2_total", "edgar_co2", "edgar_co2_short",
+                       "edgar_ch4",
+                       "edgar_n2o",
+                       dep_variables_agg)
 
 # ------------------------------------------------------------------------------
 
