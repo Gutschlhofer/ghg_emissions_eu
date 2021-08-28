@@ -137,6 +137,7 @@ if(! file.exists("./input/data_eurostat.rds")) {
     dplyr::group_by(geo, time) %>%
     dplyr::mutate(empshares = values/sum(values), #calculate industry shares
                   time = format(as.Date(time, format="%Y/%m/%d"),"%Y")) %>% 
+    dplyr::ungroup() %>% 
     dplyr::filter(nace_r2 %in% c("B-E", "F", "H")) %>%
     dplyr::mutate(nace_r2 = gsub("-", "", nace_r2),
                   nace_r2 = paste0("emp_share_",nace_r2)) %>% 
@@ -231,10 +232,20 @@ if(! file.exists("./input/data_eurostat.rds")) {
   road <- rbind(roadunload, roadload, roadtotal) %>% 
     dplyr::mutate(time = format(as.Date(time, format="%Y/%m/%d"),"%Y"))
   
+  # 7.) Heating and Cooling Degree Days
+  # nrg_chdd_a
+  heating_cooling <- get_eurostat("nrg_chddr2_a") %>% 
+    dplyr::filter(nchar(geo) == 5,
+                  unit == "NR") %>% 
+    dplyr::mutate(time = format(as.Date(time, format="%Y/%m/%d"),"%Y"),
+                  indic_nrg = tolower(indic_nrg)) %>% 
+    dplyr::select(unit = indic_nrg,
+                  geo, time, values)
+  
   # Combine Data and save:--------------------------------------------------------
   
   # combine
-  fineurostat <- rbind(gdp, gdppc, empl, gva, road)
+  fineurostat <- rbind(gdp, gdppc, empl, gva, road, heating_cooling)
   colnames(fineurostat) <- c("indicator","nuts3_id", "year", "value")
   fineurostat <- rbind(pop, shares, fineurostat)
   

@@ -10,11 +10,11 @@ data_eurostat <- readRDS("input/data_eurostat.rds") %>%
   dplyr::filter(year %in% year_filter) %>% 
   tidyr::pivot_wider(names_from = "indicator", values_from = "value")
 # heating and cooling days
-data_heating_cooling <- readRDS("input/data_heating_cooling.rds") %>% 
-  dplyr::filter(year %in% year_filter) %>% 
-  dplyr::mutate(indicator = tolower(indicator)) %>% 
-  tidyr::pivot_wider(names_from = "indicator", values_from = "value") %>% 
-  dplyr::mutate(year = as.character(year))
+# data_heating_cooling <- readRDS("input/data_heating_cooling.rds") %>% 
+#   dplyr::filter(year %in% year_filter) %>% 
+#   dplyr::mutate(indicator = tolower(indicator)) %>% 
+#   tidyr::pivot_wider(names_from = "indicator", values_from = "value") %>% 
+#   dplyr::mutate(year = as.character(year))
 
 # get emission data ------------------------------------------------------------
 
@@ -46,7 +46,7 @@ data_edgar <- readRDS("input/data_edgar_all.rds") %>%
   dplyr::mutate(value = ifelse(is.na(value), 0, value))
 
 # add total sectoral GHG emissions
-sectors <- read.csv("input/edgar/edgar_sectors.csv")$short
+sectors <- read.csv("input/edgar/edgar_sectors.csv", stringsAsFactors = FALSE)$short
 # exclude "PRO" subsectors that are already part of "PRO"
 sectors <- sectors[!grepl("PRO_", sectors, fixed = TRUE)] 
 
@@ -80,11 +80,10 @@ data_edgar <- data_edgar %>%
 # combine data -----------------------------------------------------------------
 data <- shape_nuts3 %>% 
   dplyr::left_join(data_eurostat, by = c("nuts3_id")) %>% 
-  dplyr::left_join(data_edgar, by = c("nuts3_id", "year")) %>%
-  dplyr::left_join(data_heating_cooling, by = c("nuts3_id", "year"))
+  dplyr::left_join(data_edgar, by = c("nuts3_id", "year"))
 
 # remove loaded sub-data
-rm(data_eurostat, data_edgar, data_heating_cooling)
+rm(data_eurostat, data_edgar)
 
 summary(data)
 
@@ -353,7 +352,7 @@ data_m <- data_m %>%
 # now we join the sectors list to either aggregate by 
 # sector name, category or even main category
 data_m <- data_m %>% 
-  dplyr::left_join(read.csv("input/edgar/edgar_sectors.csv")[,c("short", sector_detail)],
+  dplyr::left_join(read.csv("input/edgar/edgar_sectors.csv", stringsAsFactors = FALSE)[,c("short", sector_detail)],
                    by = c("sector" = "short")) %>% 
   dplyr::rename(short = sector) %>% 
   # dplyr::select(-sector) %>% 

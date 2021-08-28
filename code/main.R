@@ -6,19 +6,18 @@ source("code/00_libraries_functions.R")
 # Download and prepare data ----------------------------------------------------
 ## common standard: long tibble/data.frame, with year|nuts3_id|value|indicator
 
-## EDGAR: CO2 emissions excl. short cycle C
+## EDGAR: GHG emissions
 source("code/01_download_EDGAR.R")
 
-## Eurostat: Population, GDP/capita, GWA of mining and industry
+## Eurostat: all independent variables
 source("code/02_download_eurostat.R") 
 
-## AGRI4CAST: Heating and cooling days
-source("code/03_download_temp_heat_cool.R") 
+# ## AGRI4CAST: Heating and cooling days
+# source("code/03_download_temp_heat_cool.R") 
+# -> HDD and CDD are now added via eurostat
 
 
 # Combine data -----------------------------------------------------------------
-## merge data, exclude NAs, deal with outliers, create correlation tables, 
-## aggregate on NUTS2 for MAUP
 source("code/04_combine_data.R")
 
 
