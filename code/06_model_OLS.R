@@ -10,7 +10,7 @@ run_ols <- function(dep_var, data, data_nuts2, ghg_aggregate_over_sector) {
   
   base_variables <- c(
     "log(pop)",
-    "log(pop_share_Y15_64)",
+    # "log(pop_share_Y15_64)",
     # "log(pop_share_Y20_34)",
     # "log(pop_share_Y35_49)",
     # "log(pop_share_Y50_64)",
@@ -60,6 +60,13 @@ run_ols <- function(dep_var, data, data_nuts2, ghg_aggregate_over_sector) {
   
   ols_base <- lm(model_base, data)
   summary(ols_base)
+  
+  # try({
+  #   t <- car::linearHypothesis(ols_base, "urbn_type2 = urbn_type3")
+  #   print(t$`Pr(>F)`[2])
+  #   t <- car::linearHypothesis(ols_base, "coast_type2 = coast_type3")
+  #   print(t$`Pr(>F)`[2])
+  # })
   
   saveRDS(ols_base, file = sprintf("./output/regressions/OLS_%s.rds", dep_var))
   
@@ -138,20 +145,37 @@ run_ols <- function(dep_var, data, data_nuts2, ghg_aggregate_over_sector) {
 
 # dep_variables2 <- dep_variables[(6+19):109]
 # dep_variables2 <- dep_variables[grepl("edgar_co2", tolower(dep_variables))]
-dep_variables2 <- dep_variables
+# dep_variables2 <- dep_variables
 # dep_variables2 <- ghg_aggregate_over_sector
 # dep_variables2 <- "edgar_CO2_long_ENE"
 # dep_variables2 <- "edgar_co2"
+dep_variables2 <- dep_variables_sel
 
-# lapply(dep_variables2, run_ols, data = data, data_nuts2 = data_nuts2, ghg_aggregate_over_sector = ghg_aggregate_over_sector)
-# 
 # for(dep_var in dep_variables2) {
 #   run_ols(dep_var, data, data_nuts2, ghg_aggregate_over_sector)
 # }
 
 cl <- makeCluster(parallel::detectCores())
-parLapply(cl = cl, dep_variables2, run_ols, data = data, data_nuts2 = data_nuts2, ghg_aggregate_over_sector = ghg_aggregate_over_sector)
+parLapply(cl = cl, dep_variables2, run_ols, data = data, data_nuts2 = NULL, ghg_aggregate_over_sector = NULL)
 stopCluster(cl)
+
+# ------------------------------------------------------------------------------
+# Summary statistics for paper
+output <- stargazer::stargazer(
+  readRDS("output/regressions/OLS_edgar.rds"),
+  readRDS("output/regressions/OLS_edgar_CH4.rds"),
+  readRDS("output/regressions/OLS_edgar_CO2f.rds"),
+  readRDS("output/regressions/OLS_edgar_CO2o.rds"),
+  readRDS("output/regressions/OLS_edgar_N2O.rds"),
+  digits=2, # type = "text",
+  single.row = TRUE, no.space = TRUE,
+  column.sep.width = "3pt", font.size = "footnotesize",
+  title = sprintf("OLS Regression Results for GHG aggregates"),
+  out = sprintf("output/tables/OLS_mainGHG_footnotesize.tex", dep_var)
+)
+
+# ------------------------------------------------------------------------------
+
 
 readRDS("output/regressions/OLS_edgar_CO2f.rds")->test
 summary(test)
