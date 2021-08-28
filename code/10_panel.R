@@ -223,6 +223,22 @@ spatial_coefficients_west <- NULL
 spatial_coefficients_east <- NULL
 is_print_summaries <- TRUE
 
+lw_spatial <- lw_queen
+lw_spatial <- lw_inversedist
+
+coefs <- data.frame(
+  estimate = c(""),
+  std_error = c(""),
+  t_value = c(""),
+  p = c(""),
+  variable = c(""),
+  dep_var = c("")
+)
+coefs <- coefs[0,] # remove initialising row
+
+impacts_total <- c()
+impacts_colnames <- c()
+
 # capture.output() is used to store the summary output for easier readability
 capture.output(
 # for all variables on the current architecture, it takes approx 35 minutes
@@ -276,7 +292,7 @@ for(dep_var in dep_vars){
       "log(gva_share_A)",
       "log(gva_share_BE)",
       "log(gva_share_F)",
-      "log(gva_share_GJ)",
+      # "log(gva_share_GJ)",
       "log(hdd)",
       "log(cdd_fix)",
       "log(REN)",
@@ -323,7 +339,7 @@ for(dep_var in dep_vars){
     # SAC ----------------------------------------------------------------------
     # Model Base #
     
-    file_name <- sprintf("output/regressions/panel_sac_fixed_newk_%s.rds", dep_var)
+    file_name <- sprintf("output/regressions/panel_sac_fixed_newk_noGJ_%s.rds", dep_var)
     if(file.exists(file_name)) {
       panel_sac <- readRDS(file_name)
     } else {
@@ -343,6 +359,12 @@ for(dep_var in dep_vars){
     }
     if(is_print_summaries) summary(panel_sac) %>% print
     
+    coefs_tmp <- summary(panel_sac)$CoefTable %>% as.data.frame()
+    coefs_tmp$variable <- rownames(coefs_tmp)
+    rownames(coefs_tmp) <- NULL
+    coefs_tmp$dep_var <- dep_variable
+    coefs <- rbind(coefs, coefs_tmp)
+    
     row <- data.frame(
       dep_var = c(dep_variable),
       type = "SAC",
@@ -359,159 +381,169 @@ for(dep_var in dep_vars){
     } else {
       spatial_coefficients <- spatial_coefficients %>% rbind(row)
     }
-
-    # Model Base for west only
-    file_name <- sprintf("output/regressions/panel_sac_fixed_westonly_%s.rds", dep_var)
-    if(file.exists(file_name)) {
-      panel_sac <- readRDS(file_name)
-    } else {
-      panel_sac <- splm::spml(model_base
-                              ,data_panel %>% dplyr::filter(is_west == 1)
-                              ,index = c("nuts3_id", "year")
-                              , listw = lw_spatial_west
-                              # ,model = "random"
-                              ,effect = "twoways" # individual and  time
-                              ,lag = TRUE
-                              # ,spatial.error = "kkp"
-      )
-      saveRDS(panel_sac, file_name)
-    }
-    if(is_print_summaries) summary(panel_sac) %>% print
-    row <- data.frame(
-      dep_var = c(dep_variable),
-      type = "SAC",
-      # tricky thing here is that lambda and rho are swapped
-      rho_autoreg = panel_sac$coefficients["lambda"],
-      rho_p = summary(panel_sac)$CoefTable[1, 4],
-      lambda_error = panel_sac$coefficients["rho"],
-      lambda_p = summary(panel_sac)$CoefTable[2, 4],
-      is_west = NA,
-      is_west_p = NA
-    )
-    if(is.null(spatial_coefficients_west)) {
-      spatial_coefficients_west <- row
-    } else {
-      spatial_coefficients_west <- spatial_coefficients_west %>% rbind(row)
-    }
-
-    # Model Base for east only
-    file_name <- sprintf("output/regressions/panel_sac_fixed_eastonly_%s.rds", dep_var)
-    if(file.exists(file_name)) {
-      panel_sac <- readRDS(file_name)
-    } else {
-      panel_sac <- splm::spml(model_base
-                              ,data_panel %>% dplyr::filter(is_west == 0)
-                              ,index = c("nuts3_id", "year")
-                              , listw = lw_spatial_east
-                              # ,model = "random"
-                              ,effect = "twoways" # individual and  time
-                              ,lag = TRUE
-                              # ,spatial.error = "kkp"
-      )
-      saveRDS(panel_sac, file_name)
-    }
-    if(is_print_summaries) summary(panel_sac) %>% print
-    row <- data.frame(
-      dep_var = c(dep_variable),
-      type = "SAC",
-      # tricky thing here is that lambda and rho are swapped
-      rho_autoreg = panel_sac$coefficients["lambda"],
-      rho_p = summary(panel_sac)$CoefTable[1, 4],
-      lambda_error = panel_sac$coefficients["rho"],
-      lambda_p = summary(panel_sac)$CoefTable[2, 4],
-      is_west = NA,
-      is_west_p = NA
-    )
-    if(is.null(spatial_coefficients_east)) {
-      spatial_coefficients_east <- row
-    } else {
-      spatial_coefficients_east <- spatial_coefficients_east %>% rbind(row)
-    }
-
-    # Model Base + West Dummy #
-    file_name <- sprintf("output/regressions/panel_sac_fixed_west_%s.rds", dep_var)
-    if(file.exists(file_name)) {
-      panel_sac <- readRDS(file_name)
-    } else {
-      panel_sac <- splm::spml(model_eastwest, data_panel, index = c("nuts3_id", "year"), listw = lw_spatial
-                                    # ,model = "random"
-                              ,effect = "twoways" # individual and  time
-                                    ,lag = TRUE
-                                    # ,spatial.error = "kkp"
-      )
-      saveRDS(panel_sac, file_name)
-    }
-    if(is_print_summaries) summary(panel_sac) %>% print
-    spatial_coefficients <- spatial_coefficients %>% add_row(
-      dep_var = c(dep_variable),
-      type = "SAC_WestDummy",
-      # tricky thing here is that lambda and rho are swapped
-      rho_autoreg = panel_sac$coefficients["lambda"],
-      rho_p = summary(panel_sac)$CoefTable[1, 4],
-      lambda_error = panel_sac$coefficients["rho"],
-      lambda_p = summary(panel_sac)$CoefTable[2, 4],
-      is_west = panel_sac$coefficients["is_west"],
-      is_west_p = summary(panel_sac)$CoefTable[nrow(summary(panel_sac)$CoefTable), 4]
-    )
-
-    # SEM ----------------------------------------------------------------------
-    # Model Base
-
-    # if FE and not RE, then KKP = Baltagi
-    file_name <- sprintf("output/regressions/panel_sem_%s.rds", dep_var)
-    if(file.exists(file_name)) {
-      panel_sem <- readRDS(file_name)
-    } else {
-      panel_sem <- splm::spml(model_base, data_panel, index = c("nuts3_id", "year"), listw = lw_spatial
-                              ,lag = FALSE
-                              ,effect = "twoways" # individual and  time
-                              # ,spatial.error = "kkp"
-      )
-      saveRDS(panel_sem, file_name)
-    }
-    if(is_print_summaries) summary(panel_sem) %>% print
-
-    spatial_coefficients <- spatial_coefficients %>% add_row(
-      dep_var = c(dep_variable),
-      type = "SEM",
-      # tricky thing here is that lambda and rho are swapped
-      rho_autoreg = NA,
-      rho_p = NA,
-      lambda_error = panel_sem$coefficients["rho"],
-      lambda_p = summary(panel_sem)$CoefTable[1, 4],
-      is_west = NA,
-      is_west_p = NA
-    )
-
-    # Model Base + West Dummy #
-    # if FE and not RE, then KKP = Baltagi
-    file_name <- sprintf("output/regressions/panel_sem_west_%s.rds", dep_var)
-    if(file.exists(file_name)) {
-      panel_sem <- readRDS(file_name)
-    } else {
-      panel_sem <- splm::spml(model_eastwest, data_panel, index = c("nuts3_id", "year"), listw = lw_spatial
-                              ,lag = FALSE
-                              # ,spatial.error = "kkp"
-      )
-      saveRDS(panel_sem, file_name)
-    }
-    if(is_print_summaries) summary(panel_sem) %>% print
-
-    spatial_coefficients <- spatial_coefficients %>% add_row(
-      dep_var = c(dep_variable),
-      type = "SEM_WestDummy",
-      # tricky thing here is that lambda and rho are swapped
-      rho_autoreg = NA,
-      rho_p = NA,
-      lambda_error = panel_sem$coefficients["rho"],
-      lambda_p = summary(panel_sem)$CoefTable[1, 4],
-      is_west = panel_sem$coefficients["is_west"],
-      is_west_p = summary(panel_sem)$CoefTable[nrow(summary(panel_sem)$CoefTable), 4]
-    )
+    
+    impac <- spdep::impacts(panel_sac, listw = lw_spatial, time = length(unique(data_panel$year)))
+    impac_total <- impac$res$total
+    impacts_total <- cbind(impacts_total, impac_total)
+    impacts_colnames <- c(impacts_colnames, dep_var)
+    
+    # impac$res$total
+    # summary(impac)
+    # summary(impac, zstats = TRUE, short = TRUE)
+    # colnames(impac1$sres[[1]])
+# 
+#     # Model Base for west only
+#     file_name <- sprintf("output/regressions/panel_sac_fixed_westonly_%s.rds", dep_var)
+#     if(file.exists(file_name)) {
+#       panel_sac <- readRDS(file_name)
+#     } else {
+#       panel_sac <- splm::spml(model_base
+#                               ,data_panel %>% dplyr::filter(is_west == 1)
+#                               ,index = c("nuts3_id", "year")
+#                               , listw = lw_spatial_west
+#                               # ,model = "random"
+#                               ,effect = "twoways" # individual and  time
+#                               ,lag = TRUE
+#                               # ,spatial.error = "kkp"
+#       )
+#       saveRDS(panel_sac, file_name)
+#     }
+#     if(is_print_summaries) summary(panel_sac) %>% print
+#     row <- data.frame(
+#       dep_var = c(dep_variable),
+#       type = "SAC",
+#       # tricky thing here is that lambda and rho are swapped
+#       rho_autoreg = panel_sac$coefficients["lambda"],
+#       rho_p = summary(panel_sac)$CoefTable[1, 4],
+#       lambda_error = panel_sac$coefficients["rho"],
+#       lambda_p = summary(panel_sac)$CoefTable[2, 4],
+#       is_west = NA,
+#       is_west_p = NA
+#     )
+#     if(is.null(spatial_coefficients_west)) {
+#       spatial_coefficients_west <- row
+#     } else {
+#       spatial_coefficients_west <- spatial_coefficients_west %>% rbind(row)
+#     }
+# 
+#     # Model Base for east only
+#     file_name <- sprintf("output/regressions/panel_sac_fixed_eastonly_%s.rds", dep_var)
+#     if(file.exists(file_name)) {
+#       panel_sac <- readRDS(file_name)
+#     } else {
+#       panel_sac <- splm::spml(model_base
+#                               ,data_panel %>% dplyr::filter(is_west == 0)
+#                               ,index = c("nuts3_id", "year")
+#                               , listw = lw_spatial_east
+#                               # ,model = "random"
+#                               ,effect = "twoways" # individual and  time
+#                               ,lag = TRUE
+#                               # ,spatial.error = "kkp"
+#       )
+#       saveRDS(panel_sac, file_name)
+#     }
+#     if(is_print_summaries) summary(panel_sac) %>% print
+#     row <- data.frame(
+#       dep_var = c(dep_variable),
+#       type = "SAC",
+#       # tricky thing here is that lambda and rho are swapped
+#       rho_autoreg = panel_sac$coefficients["lambda"],
+#       rho_p = summary(panel_sac)$CoefTable[1, 4],
+#       lambda_error = panel_sac$coefficients["rho"],
+#       lambda_p = summary(panel_sac)$CoefTable[2, 4],
+#       is_west = NA,
+#       is_west_p = NA
+#     )
+#     if(is.null(spatial_coefficients_east)) {
+#       spatial_coefficients_east <- row
+#     } else {
+#       spatial_coefficients_east <- spatial_coefficients_east %>% rbind(row)
+#     }
+# 
+#     # Model Base + West Dummy #
+#     file_name <- sprintf("output/regressions/panel_sac_fixed_west_%s.rds", dep_var)
+#     if(file.exists(file_name)) {
+#       panel_sac <- readRDS(file_name)
+#     } else {
+#       panel_sac <- splm::spml(model_eastwest, data_panel, index = c("nuts3_id", "year"), listw = lw_spatial
+#                                     # ,model = "random"
+#                               ,effect = "twoways" # individual and  time
+#                                     ,lag = TRUE
+#                                     # ,spatial.error = "kkp"
+#       )
+#       saveRDS(panel_sac, file_name)
+#     }
+#     if(is_print_summaries) summary(panel_sac) %>% print
+#     spatial_coefficients <- spatial_coefficients %>% add_row(
+#       dep_var = c(dep_variable),
+#       type = "SAC_WestDummy",
+#       # tricky thing here is that lambda and rho are swapped
+#       rho_autoreg = panel_sac$coefficients["lambda"],
+#       rho_p = summary(panel_sac)$CoefTable[1, 4],
+#       lambda_error = panel_sac$coefficients["rho"],
+#       lambda_p = summary(panel_sac)$CoefTable[2, 4],
+#       is_west = panel_sac$coefficients["is_west"],
+#       is_west_p = summary(panel_sac)$CoefTable[nrow(summary(panel_sac)$CoefTable), 4]
+#     )
+# 
+#     # SEM ----------------------------------------------------------------------
+#     # Model Base
+# 
+#     # if FE and not RE, then KKP = Baltagi
+#     file_name <- sprintf("output/regressions/panel_sem_%s.rds", dep_var)
+#     if(file.exists(file_name)) {
+#       panel_sem <- readRDS(file_name)
+#     } else {
+#       panel_sem <- splm::spml(model_base, data_panel, index = c("nuts3_id", "year"), listw = lw_spatial
+#                               ,lag = FALSE
+#                               ,effect = "twoways" # individual and  time
+#                               # ,spatial.error = "kkp"
+#       )
+#       saveRDS(panel_sem, file_name)
+#     }
+#     if(is_print_summaries) summary(panel_sem) %>% print
+# 
+#     spatial_coefficients <- spatial_coefficients %>% add_row(
+#       dep_var = c(dep_variable),
+#       type = "SEM",
+#       # tricky thing here is that lambda and rho are swapped
+#       rho_autoreg = NA,
+#       rho_p = NA,
+#       lambda_error = panel_sem$coefficients["rho"],
+#       lambda_p = summary(panel_sem)$CoefTable[1, 4],
+#       is_west = NA,
+#       is_west_p = NA
+#     )
+# 
+#     # Model Base + West Dummy #
+#     # if FE and not RE, then KKP = Baltagi
+#     file_name <- sprintf("output/regressions/panel_sem_west_%s.rds", dep_var)
+#     if(file.exists(file_name)) {
+#       panel_sem <- readRDS(file_name)
+#     } else {
+#       panel_sem <- splm::spml(model_eastwest, data_panel, index = c("nuts3_id", "year"), listw = lw_spatial
+#                               ,lag = FALSE
+#                               # ,spatial.error = "kkp"
+#       )
+#       saveRDS(panel_sem, file_name)
+#     }
+#     if(is_print_summaries) summary(panel_sem) %>% print
+# 
+#     spatial_coefficients <- spatial_coefficients %>% add_row(
+#       dep_var = c(dep_variable),
+#       type = "SEM_WestDummy",
+#       # tricky thing here is that lambda and rho are swapped
+#       rho_autoreg = NA,
+#       rho_p = NA,
+#       lambda_error = panel_sem$coefficients["rho"],
+#       lambda_p = summary(panel_sem)$CoefTable[1, 4],
+#       is_west = panel_sem$coefficients["is_west"],
+#       is_west_p = summary(panel_sem)$CoefTable[nrow(summary(panel_sem)$CoefTable), 4]
+#     )
 
   })
 }
-, file = "output/regressions/spatial_output.txt")
+, file = "output/regressions/spatial_output_queen.txt")
 
 rownames(spatial_coefficients) <- NULL
 rownames(spatial_coefficients_west) <- NULL

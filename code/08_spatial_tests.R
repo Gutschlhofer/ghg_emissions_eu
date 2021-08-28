@@ -12,7 +12,7 @@ data_coords <- st_coordinates(st_centroid(data$geometry))
 lw_queen <- poly2nb(data, queen = TRUE)
 
 ### knn
-k <- round(0.163404391231319 * nrow(data)) # use amount of neighbours determined by gwr_sel
+k <- round(0.1 * nrow(data)) # use 10% of the sample as neighbours (109)
 lw_knn <- knearneigh(data_coords, k=k) %>% 
   knn2nb()
 
