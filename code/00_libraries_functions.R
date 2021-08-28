@@ -29,6 +29,7 @@ p_load(spatialreg)
 p_load(splm)
 p_load(naniar)
 p_load(ggmosaic)
+p_load(polycor)
 # add new packages with p_load(packagename)
 
 ## Eurostat NUTS 3 shapefile----------------------------------------------------
@@ -153,9 +154,14 @@ get_ghg_name_from_indicator <- function(indicator) {
   return(ind)
 }
 get_sector_name_from_indicator <- function(indicator) {
+  start <- 0
+  # if it's an aggregate sectors indicator, start to look for sector later
+  start <- ifelse(grepl("_agg_", indicator), start + 4, start)
+  
+  # add specific start index based on indicator
   start <- ifelse(grepl("CO2o", indicator) | grepl("CO2f", indicator),
-                  12, 
-                  11)
+                  start + 12, 
+                  ifelse(grepl("CO2total", indicator), start + 15, start + 11))
   
   sector <- substring(indicator, start)
   return(sector)
