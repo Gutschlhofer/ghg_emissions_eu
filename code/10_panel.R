@@ -288,7 +288,7 @@ for(dep_var in dep_vars){
       "log(pop_share_Y_GE65)",
       "log(density)",
       "log_gdppc",
-      "I(log_gdppc^2)",
+      # "I(log_gdppc^2)",
       "log(gva_share_A)",
       "log(gva_share_BE)",
       "log(gva_share_F)",
