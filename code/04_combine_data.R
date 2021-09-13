@@ -249,22 +249,22 @@ data_panel <- data_panel %>%
   dplyr::mutate(log_gdppc = log(gdppc) - mean(log(gdppc)))
 
 # Summary stats for paper  -----------------------------------------------------
-dep_var <- c("edgar", "edgar_CO2total", "edgar_CH4", "edgar_N2O")
-dep_var_label <- c("GHG", "CO2 total", "CH4", "N2O")
+dep_var <- c("edgar", "edgar_CH4","edgar_CO2f", "edgar_CO2o", "edgar_N2O")
+dep_var_label <- c("GHG", "CH4", "CO2f", "CO2o", "N2O")
 
 temp <- st_drop_geometry(data) %>% 
-  dplyr::select(all_of(dep_var), pop, density, gdppc,
-                gva_share_A, gva_share_BE, gva_share_F, gva_share_GJ,
-                hdd, cdd_fix) %>%
+  dplyr::select(all_of(dep_var), pop, pop_share_Y_GE65, density, gdppc,
+                gva_share_A, gva_share_BE, gva_share_F,
+                hdd, cdd_fix, REN) %>%
   dplyr::mutate_at(all_of(dep_var), round, digits = 1) %>% 
   mutate(gdppc = round(gdppc, digits = 1),
          hdd = round(hdd, digits = 1),
          cdd_fix = round(cdd_fix, digits = 1)
   )
 
-colnames(temp) <- c(dep_var_label, "Population", "Density", "GDP/cap", 
-                    "GVA A", "GVA BE", "GVA F", "GVA GJ",
-                    "HDD", "CDD")
+colnames(temp) <- c(dep_var_label, "Population", "Pop.share >=65", "Density", "GDP/cap", 
+                    "GVA share A", "GVA share B-E", "GVA share F",
+                    "HDD", "CDD", "REN")
 
 stargazer(temp, digits = 2, median = TRUE, type = "text")
 stargazer(temp, digits = 2, median = TRUE, out = "output/tables/summary_abs.tex")
@@ -273,18 +273,16 @@ stargazer(temp, digits = 2, median = TRUE, out = "output/tables/summary_abs.tex"
 temp <- st_drop_geometry(data)
 # correlation of absolute values
 cortab <- cor(temp %>% dplyr::select(edgar = all_of(dep_var), 
-                                     pop, pop_share_Y15_64, pop_share_Y_GE65,
-                                     density, gdppc, 
-                                     gva_share_A, gva_share_BE, gva_share_F, gva_share_GJ, 
-                                     hdd, cdd_fix))
+                                     pop, pop_share_Y_GE65, density, gdppc, 
+                                     gva_share_A, gva_share_BE, gva_share_F, 
+                                     hdd, cdd_fix, REN))
 rownames(cortab) <-  colnames(cortab) <- c(dep_var, 
                                            "Population",
-                                           "Population share (15-64)",
-                                           "Population share (65+)",
+                                           "Pop.share >=65",
                                            "Density", "GDP/cap",
-                                           "GVA A", "GVA BE", "GVA F", "GVA GJ",
-                                           "HDD", "CDD")
-stargazer(cortab, column.sep.width = "0pt",
+                                           "GVA A", "GVA B-E", "GVA F",
+                                           "HDD", "CDD", "REN")
+stargazer(cortab, column.sep.width = "0pt", digits = 2,
           title = "Correlation Coefficients",
           out = "output/tables/summary_cor.tex")
 
@@ -295,29 +293,29 @@ temp_dep <- temp %>%
 temp_log <- temp %>% 
   dplyr::mutate(
     pop = log(pop),
-    pop_share_Y15_64 = log(pop_share_Y15_64),
+    # pop_share_Y15_64 = log(pop_share_Y15_64),
     pop_share_Y_GE65 = log(pop_share_Y_GE65),
     gdppc = log_gdppc,
-    gdppc2 = log_gdppc^2,
+    # gdppc2 = log_gdppc^2,
     density = log(density),
     gva_share_A = log(gva_share_A),
     gva_share_BE = log(gva_share_BE),
     gva_share_F = log(gva_share_F),
-    gva_share_GJ = log(gva_share_GJ),
+    # gva_share_GJ = log(gva_share_GJ),
     hdd = log(hdd),
-    cdd_fix = log(cdd_fix))
+    cdd_fix = log(cdd_fix),
+    REN = log(REN))
 cortab.log <- cor(cbind(temp_log, temp_dep) %>% 
                     dplyr::select(all_of(dep_var), 
-                                  pop, pop_share_Y15_64, pop_share_Y_GE65,
-                                  density, gdppc, gdppc2,
-                                  starts_with("gva_share_"), hdd, cdd_fix))
+                                  pop, pop_share_Y_GE65,
+                                  density, gdppc,
+                                  starts_with("gva_share_"), hdd, cdd_fix, REN,
+                                  -gva_share_GJ))
 rownames(cortab.log) <- colnames(cortab.log) <- 
-  c(dep_var_label, "Population", "Population share (15-64)", "Population share (65+)",
-    "Density", "GDP/cap", "GDP/cap, squared", 
-    "GVA A", "GVA BE", "GVA F", "GVA GJ",
-    "HDD", "CDD")
+  c(dep_var_label, "Population", "Pop.share >=65",
+    "Density", "GDP/cap", "GVA A", "GVA BE", "GVA F", "HDD", "CDD", "REN")
 
-stargazer(cortab.log, column.sep.width = "0pt",
+stargazer(cortab.log, column.sep.width = "0pt", digits = 2,
           title = "Correlation of logged model variables",
           out = "output/tables/summary_cor_log.tex")
 
