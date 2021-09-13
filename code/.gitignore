@@ -1,1 +1,3 @@
 # Potentially exclude some temporary files later
+*.txt*
+*.Rout*
