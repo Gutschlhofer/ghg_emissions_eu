@@ -1,11 +1,8 @@
 # Spatial Econometric STIRPAT model of GHG emissions in the contiguous EU
 
 ## Data
-Most data is automatically downloaded via scripts in the [code](code) folder.
+All data needed is automatically downloaded via scripts in the [code](code) folder.
 
-However, the dataset on heating and cooling days does not allow for automated download, and you will have to download it yourself. Please find the description below.
-
-### Heating and cooling days
-The data for the heating and cooling days can be found here: [agri4cast.jrc.ec.europa.eu/DataPortal/RequestDataResource.aspx?idResource=9&o=d](https://agri4cast.jrc.ec.europa.eu/DataPortal/RequestDataResource.aspx?idResource=9&o=d).
-
-Registration is needed, but the data for both HDD and CDD can then be downloaded for different NUTS levels from 1979 onwards.
+## How to use
+1. Preparation: `install.packages("pacman")` and `remotes::install_github("coolbutuseless/ggpattern")`
+2. Run code in [code/main.R](code/main.R) ([code/00_libraries_functions.R](code/00_libraries_functions.R) automatically installs and loads all necessary packages via `pacman`)
