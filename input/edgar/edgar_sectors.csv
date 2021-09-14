@@ -1,0 +1,32 @@
+category_main,category,sector_id,ipcc_1996,sector_name,short,CH4,CO2_excl_short-cycle_org_C,CO2_org_short-cycle_C,N2O
+Energy,Fuel combustion activities,1A1a,IPCC 1996:1A1a,Power industry,ENE,x,x,x,x
+Energy,Fuel combustion activities,1A1b+1A1ci+1A1cii+1A5biii+1B1b+1B2aiii6+1B2biii3+1B1c,IPCC 1996:1A1b+1A1c+1A5b1+1B1b+1B2a5+1B2a6+1B2b5+2C1b,Oil refineries and Transformation industry,REF_TRF,x,x,x,x
+Energy,Fuel combustion activities,1A2,IPCC 1996:1A2,Combustion for manufacturing,IND,x,x,x,x
+Energy,Fuel combustion activities,1A3a_CDS,IPCC 1996:1A3a_CDS,Aviation climbing&descent,TNR_Aviation_CDS,x,x,,x
+Energy,Fuel combustion activities,1A3a_CRS,IPCC 1996:1A3a_CRS,Aviation cruise,TNR_Aviation_CRS,x,x,,x
+Energy,Fuel combustion activities,1A3a_LTO,IPCC 1996:1A3a_LTO,Aviation landing&takeoff,TNR_Aviation_LTO,x,x,,x
+Energy,Fuel combustion activities,1A3a_SPS,IPCC 1996:1A3a_SPS,Aviation supersonic,TNR_Aviation_SPS,x,x,,x
+Energy,Fuel combustion activities,1A3b_noRES,IPCC 1996:1A3b_noRES,Road transportation no resuspension,TRO_noRES,x,x,x,x
+Energy,Fuel combustion activities,1A3c+1A3e,IPCC 1996:1A3c+1A3e,"Railways, pipelines, off-road transport",TNR_Other,x,x,x,x
+Energy,Fuel combustion activities,1A3d,IPCC 1996:1A3d+1C2,Shipping,TNR_Ship,x,x,x,x
+Energy,Fuel combustion activities,1A4+1A5,IPCC 1996:1A4,Energy for buildings,RCO,x,x,x,x
+Energy,Fugitive emissions from fuels,1B1a,IPCC 1996:1B1a,Fuel exploitation COAL,PRO_COAL,x,,,
+Energy,Fugitive emissions from fuels,1B1a+1B2aiii2+1B2aiii3+1B2bi+1B2bii,IPCC 1996:1B1a+1B2a1+1B2a2+1B2a3+1B2a4+1B2c,Fuel exploitation,PRO,x,x,,x
+Energy,Fugitive emissions from fuels,1B2aiii2+1B2aiii3,IPCC 1996:1B2a1+1B2a2+1B2a3+1B2a4,Fuel exploitation OIL,PRO_OIL,x,,,
+Energy,Fugitive emissions from fuels,1B2bi+1B2bii,IPCC 1996:1B2c,Fuel exploitation GAS,PRO_GAS,x,,,
+Industrial processes and product use,Mineral industry,2A,IPCC 1996:2A,Non-metallic minerals production,NMM,,x,,
+Industrial processes and product use,Chemical industry,2B,IPCC 1996:2B,Chemical processes,CHE,x,x,,x
+Industrial processes and product use,Metal industry,2C1+2C2,IPCC 1996:2C1a+2C1c+2C1d+2C1e+2C1f+2C2,Iron and steel production,IRO,x,x,,
+Industrial processes and product use,Metal industry,2C3+2C4+2C5+2C6+2C7,IPCC 1996:2C3+2C4+2C5,Non-ferrous metals production,NFE,,x,,
+Industrial processes and product use,Non-energy products from fuels and solvent use,2D1+2D2+2D4,IPCC 1996:2G,Non energy use of fuels,NEU,,x,,
+Industrial processes and product use,"Electronics industry, product uses as substitutes for ozone depleting substances, other product manufacture and use",2D3+2E+2F+2G,IPCC 1996:3,Solvents and products use,PRU_SOL,,x,,x
+"Agriculture, forestry, and other land use",Livestock,3A1,IPCC 1996:4A,Enteric fermentation,ENF,x,,,
+"Agriculture, forestry, and other land use",Livestock,3A2,IPCC 1996:4B,Manure management,MNM,x,,,x
+"Agriculture, forestry, and other land use",Aggregate sources and Non-CO2 emissions sources on land,3C1b,IPCC 1996:4F,Agricultural waste burning,AWB,x,,x,x
+"Agriculture, forestry, and other land use",Aggregate sources and Non-CO2 emissions sources on land,3C2+3C3+3C4+3C7,IPCC 1996:4C+4D,Agricultural soils,AGS,x,x,,x
+"Agriculture, forestry, and other land use",Aggregate sources and Non-CO2 emissions sources on land,3C5+3C6,IPCC 1996:4D3,Indirect N2O emissions from agriculture,N2O,,,,x
+Waste,"Solid waste disposal, biological treatment of solid waste",4A+4B,IPCC 1996:6A+6D,Solid waste landfills,SWD_LDF,x,,,x
+Waste,Incinerationand open burning of waste,4C,IPCC 1996:6C,Solid waste incineration,SWD_INC,x,x,x,x
+Waste,Wastewater treatment and discharge,4D,IPCC 1996:6B,Waste water handling,WWT,x,,,x
+Other,Indirect N2O emissions from the atmospheric decomposition of nitrogen in NOx and NH3,5A,IPCC 1996:7B+7C,Indirect emissions from NOx and NH3,IDE,,,,x
+Other,Other,5B,IPCC 1996:7A,Fossil Fuel Fires,FFF,x,x,,x
