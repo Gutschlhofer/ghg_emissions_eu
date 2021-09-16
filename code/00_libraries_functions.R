@@ -1,6 +1,6 @@
 rm(list = ls()) # clean environment
 
-# Load libraries
+# Load libraries ---------------------------------------------------------------
 # install.packages("pacman")
 library(pacman) # download and load, load only if already downloaded
 
@@ -32,7 +32,7 @@ p_load(ggmosaic)
 p_load(polycor)
 # add new packages with p_load(packagename)
 
-## Eurostat NUTS 3 shapefile----------------------------------------------------
+## Eurostat NUTS 3 shapefile ---------------------------------------------------
 
 # this is the shapefile for 2021, we use the eurostat package which has the year 2016
 getShapefile <- function(replace = FALSE){

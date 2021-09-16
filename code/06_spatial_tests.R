@@ -56,17 +56,17 @@ perform_spatial_tests <- function(dep_var = dep_var, data = data) {
   moran.test(data_test$edgar, lw_inversedist_all) %>% print()
   moran.test(data_test$edgar, lw_queen) %>% print()
 
-  # moran.test(ols_base$residuals, lw_knn) %>% print()
-  # # moran.test(ols_cntr$residuals, lw_knn) %>% print()
-  # 
-  # moran.test(ols_base$residuals, lw_inversedist) %>% print()
-  # # moran.test(ols_cntr$residuals, lw_inversedist) %>% print()
-  # 
-  # moran.test(ols_base$residuals, lw_inversedist_all) %>% print()
-  # # moran.test(ols_cntr$residuals, lw_inversedist_all) %>% print()
-  # 
-  # moran.test(ols_base$residuals, lw_queen) %>% print()
-  # # moran.test(ols_cntr$residuals, lw_queen) %>% print()
+  moran.test(ols_base$residuals, lw_knn) %>% print()
+  # moran.test(ols_cntr$residuals, lw_knn) %>% print()
+
+  moran.test(ols_base$residuals, lw_inversedist) %>% print()
+  # moran.test(ols_cntr$residuals, lw_inversedist) %>% print()
+
+  moran.test(ols_base$residuals, lw_inversedist_all) %>% print()
+  # moran.test(ols_cntr$residuals, lw_inversedist_all) %>% print()
+
+  moran.test(ols_base$residuals, lw_queen) %>% print()
+  # moran.test(ols_cntr$residuals, lw_queen) %>% print()
   
   # Local Moran's I Test ---------------------------------------------------------
   
@@ -106,22 +106,22 @@ perform_spatial_tests <- function(dep_var = dep_var, data = data) {
     ggsave(path = plot_path, filename = sprintf(plot_template, subtitle), scale=1, width = 4, height = 5)
   }
   
-  # # plot_localmoran_sig(data_test$edgar, data_test, lw = lw_knn, subtitle = sprintf("%s / k-nearest-neighbours",dep_var))
-  # # plot_localmoran_sig(data_test$edgar, data_test, lw = lw_inversedist, subtitle = sprintf("%s / KNN-inverse-distance",dep_var))
-  # # plot_localmoran_sig(data_test$edgar, data_test, lw = lw_inversedist_all, subtitle = sprintf("%s / inverse-distance",dep_var))
-  # # plot_localmoran_sig(data_test$edgar, data_test, lw = lw_queen, subtitle = sprintf("%s / queen",dep_var))
-  # 
-  # # plot_localmoran_sig(ols_base$residuals, data_test, lw = lw_knn, subtitle = sprintf("%s OLS residuals / k-nearest-neighbours",dep_var))
-  # # plot_localmoran_sig(ols_cntr$residuals, data_test, lw = lw_knn, subtitle = sprintf("%s OLS CFE residuals / k-nearest-neighbours", dep_var))
-  # 
-  # plot_localmoran_sig(ols_base$residuals, data_test, lw = lw_inversedist, subtitle = sprintf("%s OLS residuals / inverse distance", dep_var))
-  # # plot_localmoran_sig(ols_cntr$residuals, data_test, lw = lw_inversedist, subtitle = sprintf("%s OLS CFE residuals / inverse distance", dep_var))
-  # 
-  # plot_localmoran_sig(ols_base$residuals, data_test, lw = lw_inversedist_all, subtitle = sprintf("%s OLS residuals / inverse distance all", dep_var))
-  # # plot_localmoran_sig(ols_cntr$residuals, data_test, lw = lw_inversedist_all, subtitle = sprintf("%s OLS CFE residuals / inverse distance all", dep_var))
-  # 
-  # plot_localmoran_sig(ols_base$residuals, data_test, lw = lw_queen, subtitle = sprintf("%s OLS residuals / queen", dep_var))
-  # # plot_localmoran_sig(ols_cntr$residuals, data_test, lw = lw_queen, subtitle = sprintf("%s OLS CFE residuals / queen", dep_var))
+  # plot_localmoran_sig(data_test$edgar, data_test, lw = lw_knn, subtitle = sprintf("%s / k-nearest-neighbours",dep_var))
+  # plot_localmoran_sig(data_test$edgar, data_test, lw = lw_inversedist, subtitle = sprintf("%s / KNN-inverse-distance",dep_var))
+  # plot_localmoran_sig(data_test$edgar, data_test, lw = lw_inversedist_all, subtitle = sprintf("%s / inverse-distance",dep_var))
+  # plot_localmoran_sig(data_test$edgar, data_test, lw = lw_queen, subtitle = sprintf("%s / queen",dep_var))
+
+  # plot_localmoran_sig(ols_base$residuals, data_test, lw = lw_knn, subtitle = sprintf("%s OLS residuals / k-nearest-neighbours",dep_var))
+  # plot_localmoran_sig(ols_cntr$residuals, data_test, lw = lw_knn, subtitle = sprintf("%s OLS CFE residuals / k-nearest-neighbours", dep_var))
+
+  plot_localmoran_sig(ols_base$residuals, data_test, lw = lw_inversedist, subtitle = sprintf("%s OLS residuals / inverse distance", dep_var))
+  # plot_localmoran_sig(ols_cntr$residuals, data_test, lw = lw_inversedist, subtitle = sprintf("%s OLS CFE residuals / inverse distance", dep_var))
+
+  plot_localmoran_sig(ols_base$residuals, data_test, lw = lw_inversedist_all, subtitle = sprintf("%s OLS residuals / inverse distance all", dep_var))
+  # plot_localmoran_sig(ols_cntr$residuals, data_test, lw = lw_inversedist_all, subtitle = sprintf("%s OLS CFE residuals / inverse distance all", dep_var))
+
+  plot_localmoran_sig(ols_base$residuals, data_test, lw = lw_queen, subtitle = sprintf("%s OLS residuals / queen", dep_var))
+  # plot_localmoran_sig(ols_cntr$residuals, data_test, lw = lw_queen, subtitle = sprintf("%s OLS CFE residuals / queen", dep_var))
 }
 
 # dep_variables2 <- dep_variables
@@ -373,44 +373,8 @@ for(dep_var in dep_variables2){
       sdem_vs_sem <- spatialreg::LR.Sarlm(model_sdem, model_sem)
       if(sdem_vs_sem$p.value < 0.05) { print("SDEM more likely than SEM."); sugg <- ifelse(sugg == "SEM", "SDEM", sugg) } else {"SDEM NOT more likely than SEM."}
       
-      model_gns <- spatialreg::sacsarlm(model_base, data = data, listw = lw_spatial, type="sacmixed")
-      # summary(model_gns)
-      # summary(model_gns, correlation=TRUE)
-      # W <- as(lw_spatial, "CsparseMatrix")
-      # trMatc <- trW(W, type="mult")
-      # summary(impacts(model_gns, tr=trMatc, R=2000), zstats=TRUE, short=TRUE)
-      
-      gns_sdem <- spatialreg::LR.Sarlm(model_sdem, model_gns)
-      gns_sdm <- spatialreg::LR.Sarlm(model_sdm, model_gns)
-      gns_sac <- spatialreg::LR.Sarlm(model_sac, model_gns)
-      
       if(sugg == "") {
         sugg <- "SDM"
-        # if(gns_sdem$p.value < 0.05 &
-        #    gns_sdm$p.value < 0.05 &
-        #    gns_sac$p.value < 0.05) {
-        #   sugg <- "GNS"
-        #   
-        #   # print(summary(model_gns))
-        # } else if (gns_sdem$p.value > 0.05 &
-        #            gns_sdm$p.value < 0.05 &
-        #            gns_sac$p.value < 0.05) {
-        #   sugg <- "SDEM"
-        # } else if (gns_sdem$p.value < 0.05 &
-        #            gns_sdm$p.value > 0.05 &
-        #            gns_sac$p.value < 0.05) {
-        #   sugg <- "SDM"
-        # } else if (gns_sdem$p.value < 0.05 &
-        #            gns_sdm$p.value < 0.05 &
-        #            gns_sac$p.value > 0.05) {
-        #   sugg <- "SAC"
-        # } else {
-        #   sugg <- paste0(
-        #     ifelse(gns_sdem$p.value > 0.05, "SDEM", ""),
-        #     ifelse(gns_sdm$p.value > 0.05, "SDM", ""),
-        #     ifelse(gns_sac$p.value > 0.05, "SAC", "")
-        #   )
-        # }
       }
     } else {
       # try SLX

@@ -26,25 +26,16 @@ dataframe_from_raster_file <- function(file_name, indicator_name, sector = "TOTA
   
   er <- raster::extract(r_val_per_area
                         ,shp
-                        ,method = "simple" # or method = "bilinear" (the returned values are interpolated from the values of the four nearest raster cells)
-                        # ,method = "bilinear"
+                        ,method = "simple"
                         ,fun = mean
-                        ,small = TRUE # in case polygons don't have any points in them
+                        ,small = TRUE
                         ,na.rm = TRUE
                         ,df = TRUE
                         ,sp = TRUE
-                        ,weights = TRUE # logical. If TRUE and normalizeWeights=FALSE,
-                        # the function returns, for each polygon, a matrix with the cell 
-                        # values and the approximate fraction of each cell that is covered
-                        # by the polygon(rounded to 1/100). 
-                        # If TRUE and normalizeWeights=TRUE the weights are normalized
-                        # such that they add up to one. The weights can be used for averaging;
-                        # see examples. This option can be useful (but slow) if the polygons
-                        # are small relative to the cells size of the Raster* object
-                        ,normalizeWeights = TRUE # logical. If TRUE, weights are normalized such that they add up to one for each polygon
+                        ,weights = TRUE
+                        ,normalizeWeights = TRUE
                         ) 
-  # weights = TRUE: approximate fraction of each cell that is covered by the polygon, should perform better at borders 
-  # look for totals, which is just before the year e.g. "_2010_TOTALS.txt"
+  # get year (look for totals, which is just before the year e.g. "_2010_TOTALS.txt")
   year <- as.numeric(substr(file_name,
                             regexpr(paste0(sector, ".txt"), file_name)[1]-5,
                             regexpr(paste0(sector, ".txt"), file_name)[1]-2))
@@ -65,7 +56,6 @@ dataframe_from_raster_file <- function(file_name, indicator_name, sector = "TOTA
 
 get_edgar_data <- function(download_link, file_name, short_name, sector = "TOTALS") {
   
-  # folder_name = "input/edgar/co2"
   folder_name <- paste0("input/edgar/",short_name)
   
   # create directory
@@ -138,7 +128,7 @@ get_edgar_data <- function(download_link, file_name, short_name, sector = "TOTAL
     dataframe_from_raster_file(f, paste0("edgar_", short_name), sector)
   }
   
-  # save CO2 data
+  # save GHG data
   data_edgar_ghg <- do.call(rbind, data_edgar_ghg)
   
   # check if we already have some data available,

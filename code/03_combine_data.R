@@ -9,12 +9,6 @@ shape_nuts3 <- getShapefile()
 data_eurostat <- readRDS("input/data_eurostat.rds") %>% 
   dplyr::filter(year %in% year_filter) %>% 
   tidyr::pivot_wider(names_from = "indicator", values_from = "value")
-# heating and cooling days
-# data_heating_cooling <- readRDS("input/data_heating_cooling.rds") %>% 
-#   dplyr::filter(year %in% year_filter) %>% 
-#   dplyr::mutate(indicator = tolower(indicator)) %>% 
-#   tidyr::pivot_wider(names_from = "indicator", values_from = "value") %>% 
-#   dplyr::mutate(year = as.character(year))
 
 # get emission data ------------------------------------------------------------
 
@@ -90,7 +84,7 @@ summary(data)
 # quick check for how many variables have observations with missing values
 gg_miss_var(data)
 # notes:
-# gva:share has much better coverage than emp_share
+# gva share has much better coverage than emp_share
 
 # perform some calculations
 data <- data %>% 
@@ -125,8 +119,6 @@ exclude <- c(
 )
 data <- data %>% dplyr::filter(!cntr_code %in% exclude)
 
-# data %>% pull(cntr_code) %>% unique %>% sort
-
 # # remove some observations that have no direct neighbours (for queen contiguity)
 # lw_queen <- poly2nb(data %>% dplyr::filter(year == 2016), queen = TRUE) # 7 regions with no links: 505 506 521 539 570 571 608
 # (data %>% dplyr::filter(year == 2016))[c(505,506,521,539,570,571,608),] %>% pull(nuts3_id) %>% unique
@@ -136,115 +128,11 @@ data <- data %>% dplyr::filter(!(nuts3_id %in% no_neigh))
 data_panel <- data
 data <- data %>% dplyr::filter(year == year_single)
 
-# # some treatment for outliers in new data objects
-# data[data$edgar > quantile(data$edgar,0.99),]$edgar
-# 
-# data_fix_outlier <- data %>% 
-#   dplyr::mutate(edgar = ifelse(edgar > quantile(edgar,0.99), quantile(edgar,0.99), edgar),
-#                 density = ifelse(density > quantile(density,0.99), quantile(density,0.99), density),
-#                 gdppc = ifelse(gdppc > quantile(gdppc,0.99), quantile(gdppc,0.99), gdppc))
-# 
-# data_filter_outlier <- data %>% 
-#   dplyr::filter(!(edgar > quantile(edgar,0.99)),
-#                 !(density > quantile(density,0.99)),
-#                 !(gdppc > quantile(gdppc,0.99)))
-
-# # we check the EDGAR country aggregates with the EDGAR values
-# this is the code vor EDGARv5 but can be adjusted to v6
-# edgar_input <- readxl::read_xls("input/v50_CO2_excl_short-cycle_org_C_1970_2018.xls",
-#                                 sheet = 3, skip = 9) %>%
-#   dplyr::mutate(cntr_code = countrycode::countrycode(ISO_A3, "iso3c", "iso2c",
-#                                                      custom_match = c("GRC" = "EL",
-#                                                                       "GBR" = "UK")))
-# 
-# data_with_edgar <- data %>%
-#   st_drop_geometry() %>%
-#   dplyr::group_by(cntr_code) %>%
-#   dplyr::summarise(edgar = sum(edgar)) %>%
-#   dplyr::left_join(edgar_input[,c("cntr_code", "ISO_A3", "2016")], by = "cntr_code") %>%
-#   dplyr::mutate(scale = edgar/`2016`/1e3) # gigagramms in t: 1e3
-
-# # Create dataset for NUTS2 Analysis (MAUP)--------------------------------------
-# data_nuts2 <- data
-# data_nuts2$nuts2_id <- substr(data_nuts2$nuts3_id, 1, 4) 
-# 
-# ghg_aggregate_over_sector <- c("edgar", "edgar_co2", "edgar_co2_short", "edgar_co2_total", "edgar_ch4", "edgar_n2o")
-# 
-# data_nuts2 <- data_nuts2 %>% 
-#   group_by(nuts2_id) %>% 
-#   summarise(cntr_code = first(cntr_code),
-#             edgar = sum(edgar),
-#             edgar_CO2f = sum(edgar_CO2f),
-#             edgar_CO2o = sum(edgar_CO2o),
-#             edgar_CO2total = sum(edgar_CO2total),
-#             edgar_CH4 = sum(edgar_CH4),
-#             edgar_N2O = sum(edgar_N2O),
-#             REN = mean(REN),
-#             REN_ELC = mean(REN_ELC),
-#             REN_HEAT_CL = mean(REN_HEAT_CL),
-#             REN_TRA = mean(REN_TRA),
-#             area = sum(area), 
-#             pop = sum(pop), 
-#             hdd = mean(hdd), 
-#             cdd = mean(cdd))
-# 
-# # gva share
-# gva_nuts2 <- get_eurostat("nama_10r_3gva") %>% 
-#   dplyr::filter(nchar(geo) == 4,
-#                 currency == "MIO_EUR",
-#                 nace_r2 %in% c("A", "B-E", "F", "G-J", "TOTAL"))
-# gva_nuts2_total <- gva_nuts2 %>% dplyr::filter(nace_r2 == "TOTAL")
-# gva_nuts2 <- gva_nuts2 %>% 
-#   dplyr::filter(nace_r2 != "TOTAL") %>% 
-#   dplyr::left_join(gva_nuts2_total[,c("geo","time","values")], 
-#                    by = c("geo" = "geo", "time" = "time"),
-#                    suffix = c("", "_total")) %>% 
-#   dplyr::mutate(gvashare = values / values_total) %>% 
-#   dplyr::select(nace_r2, geo, time, gvashare) %>% 
-#   dplyr::mutate(time = format(as.Date(time, format="%Y/%m/%d"),"%Y")) %>% 
-#   dplyr::filter(time == year_single) %>% 
-#   dplyr::mutate(nace_r2 = gsub("-", "", nace_r2),
-#                 nace_r2 = paste0("gva_share_",nace_r2)) %>% 
-#   dplyr::select(indicator = nace_r2, nuts2_id = geo, year = time, value = gvashare) %>% 
-#   tidyr::pivot_wider(names_from = "indicator", values_from = "value") %>% 
-#   dplyr::select(-year)
-# 
-# rm(gva_nuts2_total)
-# 
-# data_nuts2 <- dplyr::left_join(data_nuts2, gva_nuts2, by="nuts2_id")
-# 
-# # gdp
-# gdp_nuts2 <- get_eurostat("nama_10r_3gdp", filters = list(unit = "MIO_PPS_EU27_2020")) %>% 
-#   filter(nchar(geo) == 4 & time == "2018-01-01") 
-# gdp_nuts2 <- gdp_nuts2 %>% dplyr::rename(nuts2_id = geo, gdp = values)
-# data_nuts2 <- dplyr::left_join(data_nuts2, gdp_nuts2 %>% dplyr::select(-c(time, unit)), by="nuts2_id")
-# 
-# # gdppc 
-# gdppc_nuts2 <- get_eurostat("nama_10r_3gdp", filters = list(unit = "PPS_EU27_2020_HAB")) %>% 
-#   filter(nchar(geo) == 4 & time == "2018-01-01")  
-# gdppc_nuts2 <- gdppc_nuts2 %>% dplyr::rename(nuts2_id = geo, gdppc = values)
-# gdppc_nuts2$time <- format(as.Date(gdppc_nuts2$time, format="%Y/%m/%d"),"%Y")
-# data_nuts2 <- dplyr::left_join(data_nuts2, gdppc_nuts2 %>% dplyr::select(-c(time, unit)), by="nuts2_id")
-# 
-# data_nuts2 <- data_nuts2 %>%
-#   dplyr::mutate(
-#     heating_or_cooling = hdd + cdd,
-#     density = pop/area,
-#     cdd_fix = cdd+1, 
-#     cdd_log = ifelse(cdd == 0, 0, log(cdd)) )
-# 
-# summary(data_nuts2)
-# 
-# # save the nuts2 data
-# saveRDS(data_nuts2, "input/data_nuts2.rds")
-
 # Further prepare data for analysis --------------------------------------------
 
 # prepare log_gdppc, the logged value of gdppc centered around the mean
 data <- data %>% 
   dplyr::mutate(log_gdppc = log(gdppc) - mean(log(gdppc)))
-# data_nuts2 <- data_nuts2 %>% 
-#   dplyr::mutate(log_gdppc = log(gdppc) - mean(log(gdppc)))
 data_panel <- data_panel %>% 
   dplyr::mutate(log_gdppc = log(gdppc) - mean(log(gdppc)))
 
@@ -333,7 +221,6 @@ data_m <- data_panel %>%
   dplyr::select(year, 
                 nuts3_id,
                 starts_with("edgar_"),
-                # -starts_with("edgar_GHG"),
                 -edgar_CO2total,
                 -edgar_CO2f,
                 -edgar_CO2o,

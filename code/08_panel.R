@@ -24,10 +24,8 @@ create_latex <- function(summary_table_wide) {
   }
 }
 
-### 0. copy paste until capture.output from 10_panel.R -------------------------
-
 # setup ------------------------------------------------------------------------
-year_filter <- 2002:2018
+year_filter <- 2007:2018
 year_single <- 2018
 
 # get data ---------------------------------------------------------------------
@@ -186,7 +184,6 @@ for(dep_var in dep_variables2) {
   sign <- panel_summary$CoefTable[,"Pr(>|t|)"]
   
   # prepare table with summary coefficients
-  ## estimate 2 digits signif*** (std.error 2 digits)
   summary_table <- summary_table %>% dplyr::add_row(
     variable = rownames(panel_summary$CoefTable),
     coefficient = panel_summary$CoefTable[,"Estimate"] %>% round(digits = 2),
@@ -270,7 +267,7 @@ for(dep_var in dep_variables2) {
   model_base <- as.formula(paste(dep_variable, "~", paste(base_variables, collapse= "+")))
   
   # issue: a few regions have 0-values in their GHG emissions for some sectors and GHGs
-  # fix as done in 06_OLS as well: add 1kg CO2 equiv to all observations
+  # fix as done in OLS as well: add 1kg CO2 equiv to all observations
   if(any(data_panel %>% st_drop_geometry() %>% pull(dep_var) == 0)) {
     # separate the column we want to change (otherwise selection without geometry is hard)
     temp <- data_panel %>% st_drop_geometry %>% dplyr::select(all_of(dep_var))
@@ -278,8 +275,7 @@ for(dep_var in dep_variables2) {
     
     # add 1kg CO2 equiv to all observations
     temp[,dep_var] <- temp[,dep_var]+0.001
-    # TODO: robustness check with Inverse hyperbolic sine (IHS) transformation
-    
+
     data_panel <- data_panel %>% cbind(temp)
   }
   
@@ -294,7 +290,6 @@ for(dep_var in dep_variables2) {
   sign <- panel_summary$CoefTable[,"Pr(>|t|)"]
   
   # prepare table with summary coefficients
-  ## estimate 2 digits signif*** (std.error 2 digits)
   summary_table <- summary_table %>% dplyr::add_row(
     variable = rownames(panel_summary$CoefTable),
     coefficient = panel_summary$CoefTable[,"Estimate"] %>% round(digits = 2),
@@ -416,7 +411,6 @@ for(dep_var in dep_variables2) {
   sign <- panel_summary$CoefTable[,"Pr(>|t|)"]
   
   # prepare table with summary coefficients
-  ## estimate 2 digits signif*** (std.error 2 digits)
   summary_table <- summary_table %>% dplyr::add_row(
     variable = rownames(panel_summary$CoefTable),
     coefficient = panel_summary$CoefTable[,"Estimate"] %>% round(digits = 2),

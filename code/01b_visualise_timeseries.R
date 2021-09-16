@@ -2,7 +2,9 @@
 # ensure that all plots have the same theme
 theme_set(theme_minimal())
 
+# NOTE:
 # before running this, run the data_edgar code in 04_combine_data.R
+
 data_aggregates <- data_edgar %>%
   dplyr::select(year,
                 edgar_CO2f,

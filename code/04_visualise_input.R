@@ -202,11 +202,6 @@ plot_c(variable_name = "pop_share_Y_GE65", data = data, s = s, shape_nuts0 = sha
 plot_c(variable_name = "pop_share_Y15_64", data = data, s = s, shape_nuts0 = shape_nuts0, 
        plot_path = plot_path, plot_template = plot_template, direction = -1)
 
-
-# possibly only relevant for presentation: combined GDP & GVA share 
-# GDP_GVA <- plot_grid(gdp, gva, ncol = 2)
-# if(s) ggsave(plot = GDP_GVA, path = plot_path, filename = sprintf(plot_template, "GDP_GVA")) 
-
 ## CDD -------------------------------------------------------------------------
 cdd <- plot_c(variable_name = "cdd", data = data, s = s, shape_nuts0 = shape_nuts0, 
               plot_path = plot_path, plot_template = plot_template, 
@@ -220,7 +215,6 @@ hdd <- plot_c(variable_name = "hdd", data = data, s = s, shape_nuts0 = shape_nut
 # combined HDD and CDD
 HDD_CDD <- plot_grid(hdd, cdd, ncol = 2)
 if(s) ggsave(plot = HDD_CDD, path = plot_path, filename = sprintf(plot_template, "HDD_CDD"), width = 10, height = 6) 
-
 
 ## population ------------------------------------------------------------------
 data$pop <- data$pop/1000 # in 1000 people
@@ -256,7 +250,6 @@ pop <- ggplot(data = data) +
   theme(plot.margin=grid::unit(c(0,0,0,0), "cm"))
 
 data$pop <- data$pop*1000
-
 
 ## density ---------------------------------------------------------------------
 
@@ -394,7 +387,7 @@ plot_mosaic <- function(data, sector_detail = c("sector_name", "category", "cate
     dplyr::ungroup() %>%
     dplyr::mutate(value = cumsum(value) )
   
-  # change to string for labelling
+  # change to string for labeling
   breaks_values$ghg <- as.character(breaks_values$ghg)
   
   # if you only want breaks at actual breakpoints and not also for ghg labels inbetween, use this in the plot and set the labels accordingly
@@ -407,19 +400,11 @@ plot_mosaic <- function(data, sector_detail = c("sector_name", "category", "cate
   for(i in 1:(length(graph_breaks_temp)-1)){
     new_break <- (graph_breaks_temp[i+1]+graph_breaks_temp[i])/2
     
-    # if(i == 1){
-    #   graph_breaks <- c(graph_breaks_temp[i]) # otherwise we never add index i
-    #   graph_labels <- c("0.0")
-    # }
-    
     # add to the breaks
     graph_breaks <- c(graph_breaks,
                       new_break)#,
-    # graph_breaks_temp[i+1])
-    # add to the labels
     graph_labels <- c(graph_labels,
-                      breaks_values$ghg[i])#,
-    # as.character(round(graph_breaks_temp[i+1],1)))
+                      breaks_values$ghg[i])
   }
   
   mosaic <- data_m %>%
@@ -445,10 +430,6 @@ plot_mosaic <- function(data, sector_detail = c("sector_name", "category", "cate
                      "category_main" = "Main category"), reverse = TRUE)) +
     viridis::scale_fill_viridis(discrete = TRUE)
   
-  # # one can also add text inside the rectangles
-  # mosaic +
-  #   geom_text(data = ggplot_build(mosaic)$data[[1]] %>% mutate(.wt = round(.wt,0)), aes(x = (xmin+xmax)/2, y = (ymin+ymax)/2, label=replace(.wt, .wt < 300, "")))
-  
   if(s) ggsave(mosaic, path = plot_path, filename = sprintf(plot_template, paste0("ghg_mosaic_", sector_detail)), width = ifelse(sector_detail == "category", 12, 8), height = 5)
   
 }
@@ -458,10 +439,9 @@ data_tmp <- data %>% dplyr::select(-all_of(dep_variables_agg))
 plot_mosaic(data_tmp, sector_detail = "sector_name")
 plot_mosaic(data_tmp, sector_detail = "category")
 plot_mosaic(data_tmp, sector_detail = "category_main")
-# plot_mosaic(data_panel %>% dplyr::select(-all_of(dep_variables_agg)), sector_detail = "category_main_panel")
 
 # plot panel -------------------------------------------------------------------
-year_filter <- 2002:2018
+year_filter <- 2007:2018
 data_panel <- readRDS("input/data_panel.rds")
 data_panel <- data_panel %>% 
   dplyr::filter(year %in% year_filter)
