@@ -2,7 +2,7 @@ rm(list = ls()) # clean environment
 
 # Load libraries ---------------------------------------------------------------
 # install.packages("pacman")
-library(pacman) # download and load, load only if already downloaded
+library(pacman)
 
 p_load(tidyverse)
 p_load(eurostat)
@@ -30,7 +30,6 @@ p_load(splm)
 p_load(naniar)
 p_load(ggmosaic)
 p_load(polycor)
-# add new packages with p_load(packagename)
 
 ## Eurostat NUTS 3 shapefile ---------------------------------------------------
 
